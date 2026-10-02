@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tokyo flats</title>
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
+        integrity="sha256-YU3qCpj/P06tdPBJGPax0bm6Q1wltfwjsho5TR4+TYc=" crossorigin="">
+  <link rel="stylesheet" href="styles.css?v=16">
+</head>
+<body data-mode="flats">
+  <svg hidden aria-hidden="true" focusable="false">
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+    <symbol id="i-sort" viewBox="0 0 24 24"><path d="M4 7h16M7 12h10M10 17h4"/></symbol>
+    <symbol id="i-asc" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
+    <symbol id="i-desc" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></symbol>
+    <symbol id="i-prev" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"/></symbol>
+    <symbol id="i-next" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+    <symbol id="i-area" viewBox="0 0 24 24"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></symbol>
+    <symbol id="i-floor" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2M10.5 21v-3h3v3"/></symbol>
+    <symbol id="i-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></symbol>
+    <symbol id="i-yen" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8.5 7 3.5 5 3.5-5M12 12v5M9.5 13.5h5M9.5 15.5h5"/></symbol>
+    <symbol id="i-train" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="14" rx="3"/><path d="M5 10h14M9 21l1.5-3M15 21l-1.5-3M9 14h.01M15 14h.01"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/></symbol>
+    <symbol id="i-gym" viewBox="0 0 24 24"><path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/></symbol>
+    <symbol id="i-cart" viewBox="0 0 24 24"><path d="M3 4.5h2.5l2.3 10h9.4l2.3-7H6.7"/><circle cx="9.5" cy="18.5" r="1.25"/><circle cx="16" cy="18.5" r="1.25"/></symbol>
+    <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M7 4h10v16l-5-3.5L7 20z"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M5 7h14M10 7V5h4v2M7 7l1 13h8l1-13"/></symbol>
+    <symbol id="i-lift" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M12 3v18M8.5 10l1.5-2 1.5 2M12.5 14l1.5 2 1.5-2"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3.5 2.6 5.3 5.9.9-4.25 4.15 1 5.85L12 16.95 6.75 19.7l1-5.85L3.5 9.7l5.9-.9z"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-6-5.3-6-10a6 6 0 0 1 12 0c0 4.7-6 10-6 10z"/><circle cx="12" cy="11" r="2"/></symbol>
+    <symbol id="i-road" viewBox="0 0 24 24"><path d="M8 3 5 21M16 3l3 18M12 4v3M12 10.5v3M12 17v3"/></symbol>
+    <symbol id="i-lot" viewBox="0 0 24 24"><path d="M4 8l7-4 9 4-2 12H6z"/></symbol>
+    <symbol id="i-zone" viewBox="0 0 24 24"><path d="M12 4 3 9l9 5 9-5zM3 14l9 5 9-5"/></symbol>
+    <symbol id="i-house" viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9H4zM10 20v-5h4v5"/></symbol>
+    <symbol id="i-hammer" viewBox="0 0 24 24"><path d="M4 20l9-9M11 5l3-2 7 7-2 3-3-1-4-4z"/></symbol>
+    <symbol id="i-setback" viewBox="0 0 24 24"><path d="M4 4v16M20 12H9M12 9l-3 3 3 3"/></symbol>
+    <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M15 8l2 2"/></symbol>
+  </svg>
+
+  <div class="app" id="app">
+    <header class="bar">
+      <select class="brand" id="mode" aria-label="Show">
+        <option value="flats">Tokyo flats</option>
+        <option value="land">Tokyo land</option>
+      </select>
+
+      <div class="field field-search">
+        <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
+        <input type="search" id="q" placeholder="Search name, address or station" aria-label="Search listings by name, address or station" autocomplete="off" spellcheck="false">
+      </div>
+
+      <div class="field field-range" role="group" aria-label="Price, millions of yen">
+        <span class="unit" aria-hidden="true">¥M</span>
+        <input type="number" id="pmin" placeholder="Min" min="0" step="1" inputmode="decimal" aria-label="Minimum price, millions of yen">
+        <span class="dash" aria-hidden="true">–</span>
+        <input type="number" id="pmax" placeholder="Max" min="0" step="1" inputmode="decimal" aria-label="Maximum price, millions of yen">
+      </div>
+
+      <div class="field field-range" role="group" aria-label="Area, square metres">
+        <span class="unit" aria-hidden="true">㎡</span>
+        <input type="number" id="amin" placeholder="Min" min="0" step="1" inputmode="decimal" aria-label="Minimum area, square metres">
+        <span class="dash" aria-hidden="true">–</span>
+        <input type="number" id="amax" placeholder="Max" min="0" step="1" inputmode="decimal" aria-label="Maximum area, square metres">
+      </div>
+
+      <div class="field field-sort">
+        <svg class="icon" aria-hidden="true"><use href="#i-sort"/></svg>
+        <select id="sort" aria-label="Sort by">
+          <option value="price">Price</option>
+          <option value="ppm2">Price per ㎡</option>
+          <option value="area">Area</option>
+          <option value="shinjuku">Time to Shinjuku</option>
+          <option value="fees" data-mode="flats">Monthly fees</option>
+          <option value="walk">Station walk</option>
+        </select>
+        <button type="button" id="dir" class="dir" aria-label="Ascending, switch to descending">
+          <svg class="icon" aria-hidden="true"><use href="#i-asc"/></svg>
+        </button>
+      </div>
+
+      <output id="count" class="count" aria-live="polite"></output>
+
+      <div class="bar-break" aria-hidden="true"></div>
+      <div class="field field-range field-max" role="group" aria-label="Walk to nearest station, minutes">
+        <svg class="icon" aria-hidden="true"><use href="#i-train"/></svg>
+        <input type="number" id="wmax" placeholder="Max" min="0" step="1" inputmode="numeric" aria-label="Maximum walk to nearest station, minutes">
+        <span class="unit" aria-hidden="true">min</span>
+      </div>
+      <div class="field field-range field-max" role="group" aria-label="Time to Shinjuku, minutes">
+        <svg class="icon" aria-hidden="true"><use href="#i-pin"/></svg>
+        <input type="number" id="smax" placeholder="Max" min="0" step="1" inputmode="numeric" aria-label="Maximum time to shinjuku, minutes">
+        <span class="unit" aria-hidden="true">min to Shinjuku</span>
+      </div>
+      <div class="field field-range field-max" role="group" aria-label="Monthly fees, thousands of yen" data-mode="flats">
+        <svg class="icon" aria-hidden="true"><use href="#i-yen"/></svg>
+        <input type="number" id="fmax" placeholder="Max" min="0" step="1" inputmode="numeric" aria-label="Maximum monthly fees, thousands of yen">
+        <span class="unit" aria-hidden="true">¥k/mo</span>
+      </div>
+      <div class="field field-range" role="group" aria-label="Year built" data-mode="flats">
+        <svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg>
+        <input type="number" id="bmin" placeholder="From" min="1900" step="1" inputmode="numeric" aria-label="Built from year">
+        <span class="dash" aria-hidden="true">–</span>
+        <input type="number" id="bmax" placeholder="To" min="1900" step="1" inputmode="numeric" aria-label="Built up to year">
+      </div>
+      <div class="field field-range field-max" role="group" aria-label="Walk to Anytime Fitness, minutes">
+        <svg class="icon" aria-hidden="true"><use href="#i-gym"/></svg>
+        <input type="number" id="gmax" placeholder="Max" min="0" step="1" inputmode="numeric" aria-label="Maximum walk to anytime fitness, minutes">
+        <span class="unit" aria-hidden="true">min</span>
+      </div>
+      <div class="field field-range field-max" role="group" aria-label="Walk to supermarket, minutes">
+        <svg class="icon" aria-hidden="true"><use href="#i-cart"/></svg>
+        <input type="number" id="mmax" placeholder="Max" min="0" step="1" inputmode="numeric" aria-label="Maximum walk to supermarket, minutes">
+        <span class="unit" aria-hidden="true">min</span>
+      </div>
+
+      <div class="field field-sort field-lift" data-mode="flats">
+        <svg class="icon" aria-hidden="true"><use href="#i-lift"/></svg>
+        <select id="lift" aria-label="Lift">
+          <option value="">Lift: any</option>
+          <option value="yes">Lift confirmed</option>
+          <option value="likely">Lift confirmed or likely</option>
+        </select>
+      </div>
+
+      <div class="field field-sort field-multi" data-mode="land">
+        <svg class="icon" aria-hidden="true"><use href="#i-lot"/></svg>
+        <details class="multi" id="shape" data-any="Shape: any">
+          <summary></summary>
+          <div class="multi-panel"></div>
+        </details>
+      </div>
+      <div class="field field-sort field-multi" data-mode="land">
+        <svg class="icon" aria-hidden="true"><use href="#i-zone"/></svg>
+        <details class="multi" id="zoning" data-any="Zoning: any">
+          <summary></summary>
+          <div class="multi-panel"></div>
+        </details>
+      </div>
+      <div class="field field-range field-max" role="group" aria-label="Floor-area ratio, percent" data-mode="land">
+        <svg class="icon" aria-hidden="true"><use href="#i-floor"/></svg>
+        <input type="number" id="farmin" placeholder="Min" min="0" step="10" inputmode="numeric" aria-label="Minimum floor-area ratio, percent">
+        <span class="unit" aria-hidden="true">% FAR</span>
+      </div>
+      <div class="field field-range field-max field-sort" role="group" aria-label="Road" data-mode="land">
+        <svg class="icon" aria-hidden="true"><use href="#i-road"/></svg>
+        <input type="number" id="rwmin" placeholder="Min" min="0" step="0.5" inputmode="decimal" aria-label="Minimum road width, metres">
+        <span class="unit" aria-hidden="true">m</span>
+        <select id="roadpub" aria-label="Road type">
+          <option value="">Any road</option>
+          <option value="public">Public road only</option>
+        </select>
+      </div>
+      <div class="field field-sort" data-mode="land">
+        <svg class="icon" aria-hidden="true"><use href="#i-hammer"/></svg>
+        <select id="builder" aria-label="Building conditions">
+          <option value="">Builder: any</option>
+          <option value="none">No seller's builder</option>
+        </select>
+      </div>
+      <div class="field field-sort" data-mode="land">
+        <svg class="icon" aria-hidden="true"><use href="#i-setback"/></svg>
+        <select id="setback" aria-label="Setback">
+          <option value="">Setback: any</option>
+          <option value="none">No setback</option>
+        </select>
+      </div>
+      <div class="field field-sort" data-mode="land">
+        <svg class="icon" aria-hidden="true"><use href="#i-house"/></svg>
+        <select id="lot" aria-label="Lot">
+          <option value="">Lot: any</option>
+          <option value="vacant">Vacant</option>
+          <option value="oldhouse">Old house</option>
+        </select>
+      </div>
+      <div class="field field-sort" data-mode="land">
+        <svg class="icon" aria-hidden="true"><use href="#i-yen"/></svg>
+        <select id="pfixed" aria-label="Price type">
+          <option value="">Price: any</option>
+          <option value="fixed">Fixed price only</option>
+        </select>
+      </div>
+      <div class="field field-sort" data-mode="land">
+        <svg class="icon" aria-hidden="true"><use href="#i-key"/></svg>
+        <select id="lease" aria-label="Leasehold">
+          <option value="">Owned land only</option>
+          <option value="include">Include leasehold</option>
+        </select>
+      </div>
+
+      <div class="field field-sort">
+        <svg class="icon" aria-hidden="true"><use href="#i-star"/></svg>
+        <select id="fav" aria-label="Favourites">
+          <option value="">All listings</option>
+          <option value="only">Favourites only</option>
+        </select>
+      </div>
+
+      <div class="field field-sort field-presets">
+        <svg class="icon" aria-hidden="true"><use href="#i-bookmark"/></svg>
+        <select id="presets" aria-label="Saved filters">
+          <option value="">Saved filters</option>
+        </select>
+        <button type="button" id="preset-update" class="preset-update" aria-label="Update selected saved filters with current filters" hidden>Update</button>
+        <button type="button" id="preset-save" class="dir" aria-label="Save current filters as new">
+          <svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>
+        </button>
+        <button type="button" id="preset-delete" class="dir" aria-label="Delete selected saved filters" hidden>
+          <svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="main">
+      <section class="list" id="list" aria-label="Listings"></section>
+      <div class="divider" id="divider" role="separator" aria-orientation="vertical" aria-label="Resize listings and map" aria-valuemin="25" aria-valuemax="75" aria-valuenow="48" tabindex="0"></div>
+      <section class="map" id="map" aria-label="Map"></section>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.22/leaflet-maplibre-gl.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"
+          integrity="sha256-Hk4dIpcqOSb0hZjgyvFOP+cEmDXUKKNE/tT542ZbNQg=" crossorigin=""></script>
+  <script>window.IMG_BASE = "https://vinceh-tokyo-property-photos.s3.ap-northeast-1.amazonaws.com/";</script>
+  <meta name="robots" content="noindex">
+  <script src="data.js?v=29"></script>
+  <script src="land.js?v=6"></script>
+  <script src="lines.js?v=4"></script>
+  <script src="stations.js?v=1"></script>
+  <script src="app.js?v=36"></script>
+</body>
+</html>
