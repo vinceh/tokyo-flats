@@ -2,14 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Tokyo flats</title>
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
         integrity="sha256-YU3qCpj/P06tdPBJGPax0bm6Q1wltfwjsho5TR4+TYc=" crossorigin="">
-  <link rel="stylesheet" href="styles.css?v=17">
+  <link rel="stylesheet" href="styles.css?v=18">
 </head>
 <body data-mode="flats">
   <svg hidden aria-hidden="true" focusable="false">
@@ -40,6 +40,7 @@
     <symbol id="i-house" viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9H4zM10 20v-5h4v5"/></symbol>
     <symbol id="i-hammer" viewBox="0 0 24 24"><path d="M4 20l9-9M11 5l3-2 7 7-2 3-3-1-4-4z"/></symbol>
     <symbol id="i-setback" viewBox="0 0 24 24"><path d="M4 4v16M20 12H9M12 9l-3 3 3 3"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
     <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M15 8l2 2"/></symbol>
   </svg>
 
@@ -54,7 +55,9 @@
         <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
         <input type="search" id="q" placeholder="Search name, address or station" aria-label="Search listings by name, address or station" autocomplete="off" spellcheck="false">
       </div>
+      <button type="button" id="filters-btn" class="filters-btn" aria-expanded="false" aria-controls="filters">Filters</button>
 
+      <div class="filters" id="filters">
       <div class="field field-range" role="group" aria-label="Price, millions of yen">
         <span class="unit" aria-hidden="true">¥M</span>
         <input type="number" id="pmin" placeholder="Min" min="0" step="1" inputmode="decimal" aria-label="Minimum price, millions of yen">
@@ -215,12 +218,17 @@
           <svg class="icon" aria-hidden="true"><use href="#i-trash"/></svg>
         </button>
       </div>
+      <button type="button" id="filters-close" class="sheet-close" aria-label="Close filters"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
+      <div class="sheet-foot"><button type="button" id="filters-done" class="filters-done">Show listings</button></div>
+      </div>
     </header>
 
     <div class="main">
       <section class="list" id="list" aria-label="Listings"></section>
       <div class="divider" id="divider" role="separator" aria-orientation="vertical" aria-label="Resize listings and map" aria-valuemin="25" aria-valuemax="75" aria-valuenow="48" tabindex="0"></div>
       <section class="map" id="map" aria-label="Map"></section>
+      <div class="map-card" id="map-card" hidden></div>
+      <button type="button" id="view-toggle" class="view-toggle">Map</button>
     </div>
   </div>
 
@@ -236,6 +244,6 @@
   <script src="land.js?v=6"></script>
   <script src="lines.js?v=4"></script>
   <script src="stations.js?v=1"></script>
-  <script src="app.js?v=37"></script>
+  <script src="app.js?v=38"></script>
 </body>
 </html>

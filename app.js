@@ -107,6 +107,9 @@
     return s;
   }
   var state = freshState();
+  // Phones get one view at a time and a filters sheet; touch screens get no hover highlight.
+  var phone = matchMedia('(max-width: 760px)');
+  var noHover = matchMedia('(hover: none)');
   var carouselIdx = {};
   var activeIds = [];
   var filtered = ITEMS.slice();
@@ -186,12 +189,16 @@
       lastKey = idKey;
       renderMarkers();
     }
+    renderSheet();
   }
 
   // Listings -------------------------------------------------------------
 
   var listEl = document.getElementById('list');
   var countEl = document.getElementById('count');
+  var doneBtn = document.getElementById('filters-done');
+  var filtersBtn = document.getElementById('filters-btn');
+  var sheetEl = document.getElementById('map-card');
 
   // Many land listings have no name; the address stands in for it.
   function titleOf(it) { return it.name || it.address; }
@@ -297,6 +304,11 @@
     countEl.innerHTML = n === total
       ? '<strong>' + total + '</strong> listings'
       : '<strong>' + n + '</strong> of ' + total + ' listings';
+    doneBtn.textContent = 'Show ' + n + (n === 1 ? ' listing' : ' listings');
+    var k = M.sel.filter(function (s) { return state[s]; }).length +
+      M.num.filter(function (s) { return state[s] != null; }).length +
+      M.multi.filter(function (s) { return state[s].length; }).length;
+    filtersBtn.textContent = 'Filters' + (k ? ' · ' + k : '');
   }
 
   function cardEl(id) {
@@ -321,7 +333,8 @@
     wrap.querySelector('.carousel-count').textContent = (idx + 1) + ' / ' + n;
   }
 
-  listEl.addEventListener('click', function (e) {
+  // Card buttons work the same in the list and in the map sheet; only a list card selects.
+  function onCardClick(e) {
     var lnk = e.target.closest('.link-btn');
     if (lnk) {
       e.preventDefault();
@@ -343,8 +356,10 @@
       saveFavs();
       var mk = M.markers && M.markers[id];
       if (mk) { mk.setIcon(pinIcon(M.byId[id])); applyMarkerStates(); }
-      fav.classList.toggle('is-fav', !!favs[id]);
-      fav.setAttribute('aria-pressed', favs[id] ? 'true' : 'false');
+      document.querySelectorAll('.card[data-id="' + id + '"] .fav-btn').forEach(function (b) {
+        b.classList.toggle('is-fav', !!favs[id]);
+        b.setAttribute('aria-pressed', favs[id] ? 'true' : 'false');
+      });
       if (state.fav === 'only' && !favs[id]) applyFilters();
       return;
     }
@@ -356,8 +371,9 @@
     }
     if (e.target.closest('a')) return;
     var card = e.target.closest('.card');
-    if (card) setActive([card.dataset.id]);
-  });
+    if (card && listEl.contains(card)) setActive([card.dataset.id]);
+  }
+  listEl.addEventListener('click', onCardClick);
 
   listEl.addEventListener('keydown', function (e) {
     if (e.key !== 'Enter' || !e.target.classList.contains('card')) return;
@@ -540,6 +556,7 @@
   // pin also brings its card into view if it is scrolled out of sight.
   var mapHoverIds = [];
   function setMapHover(ids, reveal) {
+    if (noHover.matches) ids = [];
     mapHoverIds.forEach(function (id) { var c = cardEl(id); if (c) c.classList.remove('is-maphover'); });
     mapHoverIds = ids;
     ids.forEach(function (id) { var c = cardEl(id); if (c) c.classList.add('is-maphover'); });
@@ -588,11 +605,31 @@
       if (c) c.classList.add('is-active');
     });
     applyMarkerStates();
+    renderSheet();
     // Selecting one unit frames it with its station, gym and supermarket so the
     // walking lines are readable (they are a few pixels long at city zoom).
+    // On a phone the frame sits above the listing's sheet.
     var pts = renderOverlays();
-    if (pts) map.flyToBounds(L.latLngBounds(pts), { padding: [72, 72], maxZoom: 16, duration: 0.6 });
+    var cover = sheetEl.hidden ? 0 : map.getContainer().getBoundingClientRect().bottom - sheetEl.getBoundingClientRect().top;
+    if (pts) map.flyToBounds(L.latLngBounds(pts), { padding: [72, 72], paddingBottomRight: [72, 72 + cover], maxZoom: 16, duration: 0.6 });
   }
+
+  // Phone: the one selected listing's card, as a sheet over the map. It is kept
+  // while the same listing stays selected, so its photo position is not reset.
+  function renderSheet() {
+    var id = phone.matches && activeIds.length === 1 && cluster.hasLayer(markers[activeIds[0]]) ? activeIds[0] : '';
+    if (!id) { sheetEl.hidden = true; sheetEl.dataset.id = ''; return; }
+    if (sheetEl.dataset.id !== id) {
+      sheetEl.innerHTML = '<button type="button" class="sheet-x" aria-label="Close">' + icon('close') + '</button>' + cardHtml(BY_ID[id]);
+      sheetEl.dataset.id = id;
+    }
+    sheetEl.hidden = false;
+  }
+  sheetEl.addEventListener('click', function (e) {
+    if (e.target.closest('.sheet-x')) setActive([]);
+    else onCardClick(e);
+  });
+  map.on('click', function () { if (!sheetEl.hidden) setActive([]); });
 
   // Selection overlays: with exactly one unit selected (and still on the map),
   // its nearest station, Anytime Fitness and supermarket each get a badge, a
@@ -668,7 +705,7 @@
   var hoverEl = null;
   function setHover(id, on) {
     if (hoverEl) { hoverEl.classList.remove('is-hover'); hoverEl = null; }
-    if (!on) return;
+    if (!on || noHover.matches) return;
     var el = visibleEl(id);
     if (el) { el.classList.add('is-hover'); hoverEl = el; }
   }
@@ -926,6 +963,24 @@
     applyFilters();
   });
 
+  // Phone views -----------------------------------------------------------
+
+  var viewBtn = document.getElementById('view-toggle');
+  function showMap(on) {
+    document.body.classList.toggle('is-map', on);
+    viewBtn.textContent = on ? 'List' : 'Map';
+    if (on) map.invalidateSize();
+  }
+  viewBtn.addEventListener('click', function () { showMap(!document.body.classList.contains('is-map')); });
+
+  function openFilters(on) {
+    document.body.classList.toggle('is-filters-open', on);
+    filtersBtn.setAttribute('aria-expanded', on ? 'true' : 'false');
+  }
+  filtersBtn.addEventListener('click', function () { openFilters(true); });
+  document.getElementById('filters-close').addEventListener('click', function () { openFilters(false); });
+  doneBtn.addEventListener('click', function () { openFilters(false); });
+
   // Boot -----------------------------------------------------------------
 
   // Shareable view: the address bar always holds the current view — mode, search,
@@ -992,6 +1047,7 @@
       syncControls();
       applyFilters();
     }
+    if (phone.matches) showMap(true);
     setActive([target]);
     scrollToCard(target);
   }
