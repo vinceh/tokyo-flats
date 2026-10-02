@@ -672,3 +672,13 @@ select.brand {
 .link-btn .icon { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
 .link-btn:hover { color: var(--ink); }
 .link-btn.is-copied { background: var(--accent); color: #fff; }
+
+.share-btn {
+  display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink-2);
+  font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.share-btn .icon { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.share-btn:hover { color: var(--ink); border-color: var(--line-2); }
+.share-btn.is-copied { background: var(--accent); border-color: var(--accent); color: #fff; }
+.share-btn.is-copied span::after { content: ' · copied'; }

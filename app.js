@@ -576,9 +576,8 @@
   }
 
   function setActive(ids) {
-    // Permalink: a single selected listing is reflected in the address bar (#<mode>/<id>).
-    var want = ids.length === 1 ? '#' + mode + '/' + ids[0] : '';
-    if (location.hash !== want) history.replaceState(null, '', want || location.pathname + location.search);
+    activeIdsForUrl = ids;
+    writeUrlSoon();
     activeIds.forEach(function (id) {
       var c = cardEl(id);
       if (c) c.classList.remove('is-active');
@@ -837,7 +836,7 @@
     if (saved.dir === 1 || saved.dir === -1) state.dir = saved.dir;
   }
   var baseApply = applyFilters;
-  applyFilters = function () { baseApply(); saveFilters(); if (window.__syncPresets) window.__syncPresets(); };
+  applyFilters = function () { baseApply(); saveFilters(); if (window.__syncPresets) window.__syncPresets(); writeUrlSoon(); };
 
   // Named saved filter sets, picked from the "Saved filters" dropdown.
   var presetSel = document.getElementById('presets');
@@ -929,15 +928,65 @@
 
   // Boot -----------------------------------------------------------------
 
-  // Opening a permalink (#flats/<id> or #land/<id>): switch mode, make sure the
-  // listing passes the filters, then select it.
+  // Shareable view: the address bar always holds the current view — mode, search,
+  // filters, sort, map position and the selected listing — so copying it shares exactly
+  // what is on screen. Favourites stay personal and are left out.
+  //   ?m=land&q=..&pmax=150&shape=flag,corner&sort=area&dir=-1&z=14&c=35.68,139.70#land/<id>
+  var activeIdsForUrl = [];
+  var urlTimer = 0;
+  function viewUrl() {
+    var p = new URLSearchParams();
+    p.set('m', mode);
+    if (state.q) p.set('q', state.q);
+    M.sel.forEach(function (k) { if (k !== 'fav' && state[k]) p.set(k, state[k]); });
+    M.num.forEach(function (k) { if (state[k] != null) p.set(k, state[k]); });
+    M.multi.forEach(function (k) { if (state[k].length) p.set(k, state[k].join(',')); });
+    if (state.sort !== 'price') p.set('sort', state.sort);
+    if (state.dir === -1) p.set('dir', '-1');
+    var c = map.getCenter();
+    p.set('z', map.getZoom());
+    p.set('c', c.lat.toFixed(5) + ',' + c.lng.toFixed(5));
+    var sel = activeIdsForUrl.length === 1 ? '#' + mode + '/' + activeIdsForUrl[0] : '';
+    return location.pathname + '?' + p.toString() + sel;
+  }
+  function writeUrlSoon() {
+    clearTimeout(urlTimer);
+    urlTimer = setTimeout(function () { history.replaceState(null, '', viewUrl()); }, 200);
+  }
+  map.on('moveend zoomend', writeUrlSoon);
+
+  var shareBtn = document.getElementById('share');
+  shareBtn.addEventListener('click', function () {
+    var url = location.origin + viewUrl();
+    (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).catch(function () {
+      var t = document.createElement('textarea'); t.value = url; document.body.appendChild(t); t.select();
+      try { document.execCommand('copy'); } catch (err) {} t.remove();
+    });
+    shareBtn.classList.add('is-copied');
+    setTimeout(function () { shareBtn.classList.remove('is-copied'); }, 1400);
+  });
+
+  // Opening a shared view (or an older #<mode>/<id> permalink).
+  var qs = new URLSearchParams(location.search);
   var link = /^#(flats|land)\/(.+)$/.exec(location.hash);
-  if (link && MODES[link[1]] && MODES[link[1]].byId[decodeURIComponent(link[2])]) mode = link[1];
+  var shared = qs.has('m') && MODES[qs.get('m')];
+  if (shared) mode = qs.get('m');
+  else if (link && MODES[link[1]] && MODES[link[1]].byId[decodeURIComponent(link[2])]) mode = link[1];
   enterMode(mode);
+  if (shared) {
+    state = freshState();
+    state.q = qs.get('q') || '';
+    M.sel.forEach(function (k) { if (k !== 'fav' && qs.has(k)) state[k] = qs.get(k); });
+    M.num.forEach(function (k) { if (qs.has(k) && qs.get(k) !== '' && !isNaN(+qs.get(k))) state[k] = +qs.get(k); });
+    M.multi.forEach(function (k) { if (qs.get(k)) state[k] = qs.get(k).split(','); });
+    if (qs.get('sort') && sortOk(qs.get('sort'))) state.sort = qs.get('sort');
+    if (qs.get('dir') === '-1') state.dir = -1;
+    syncControls();
+  }
   applyFilters();
-  if (link && mode === link[1]) {
+  if (link && mode === link[1] && BY_ID[decodeURIComponent(link[2])]) {
     var target = decodeURIComponent(link[2]);
-    if (!filtered.some(function (it) { return it.id === target; })) {
+    if (!shared && !filtered.some(function (it) { return it.id === target; })) {
       state = freshState();
       if (BY_ID[target].leasehold) state.lease = 'include';
       syncControls();
@@ -945,5 +994,9 @@
     }
     setActive([target]);
     scrollToCard(target);
+  }
+  if (shared && qs.get('c') && qs.get('z')) {
+    var cc = qs.get('c').split(',').map(Number);
+    if (cc.length === 2 && !isNaN(cc[0]) && !isNaN(cc[1])) { map.stop(); map.setView(cc, +qs.get('z'), { animate: false }); }
   }
 })();

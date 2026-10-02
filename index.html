@@ -9,7 +9,7 @@
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
         integrity="sha256-YU3qCpj/P06tdPBJGPax0bm6Q1wltfwjsho5TR4+TYc=" crossorigin="">
-  <link rel="stylesheet" href="styles.css?v=16">
+  <link rel="stylesheet" href="styles.css?v=17">
 </head>
 <body data-mode="flats">
   <svg hidden aria-hidden="true" focusable="false">
@@ -85,6 +85,7 @@
       </div>
 
       <output id="count" class="count" aria-live="polite"></output>
+      <button type="button" id="share" class="share-btn" aria-label="Copy a link to this view"><svg class="icon" aria-hidden="true"><use href="#i-link"/></svg><span>Share view</span></button>
 
       <div class="bar-break" aria-hidden="true"></div>
       <div class="field field-range field-max" role="group" aria-label="Walk to nearest station, minutes">
@@ -235,6 +236,6 @@
   <script src="land.js?v=6"></script>
   <script src="lines.js?v=4"></script>
   <script src="stations.js?v=1"></script>
-  <script src="app.js?v=36"></script>
+  <script src="app.js?v=37"></script>
 </body>
 </html>
