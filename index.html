@@ -9,7 +9,7 @@
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
         integrity="sha256-YU3qCpj/P06tdPBJGPax0bm6Q1wltfwjsho5TR4+TYc=" crossorigin="">
-  <link rel="stylesheet" href="styles.css?v=118">
+  <link rel="stylesheet" href="styles.css?v=119">
 </head>
 <body data-mode="flats">
   <svg hidden aria-hidden="true" focusable="false">
@@ -33,6 +33,9 @@
     <symbol id="i-lift" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M12 3v18M8.5 10l1.5-2 1.5 2M12.5 14l1.5 2 1.5-2"/></symbol>
     <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3.5 2.6 5.3 5.9.9-4.25 4.15 1 5.85L12 16.95 6.75 19.7l1-5.85L3.5 9.7l5.9-.9z"/></symbol>
     <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+    <symbol id="i-map" viewBox="0 0 24 24"><path d="M9 4 3 6.5v13.5l6-2.5 6 2.5 6-2.5V4l-6 2.5z M9 4v13.5M15 6.5V20"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></symbol>
     <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-6-5.3-6-10a6 6 0 0 1 12 0c0 4.7-6 10-6 10z"/><circle cx="12" cy="11" r="2"/></symbol>
     <symbol id="i-road" viewBox="0 0 24 24"><path d="M8 3 5 21M16 3l3 18M12 4v3M12 10.5v3M12 17v3"/></symbol>
     <symbol id="i-lot" viewBox="0 0 24 24"><path d="M4 8l7-4 9 4-2 12H6z"/></symbol>
@@ -56,6 +59,7 @@
         <input type="search" id="q" placeholder="Search name, address or station" aria-label="Search listings by name, address or station" autocomplete="off" spellcheck="false">
       </div>
       <button type="button" id="filters-btn" class="filters-btn" aria-expanded="false" aria-controls="filters">Filters</button>
+      <button type="button" id="view-toggle" class="view-toggle" aria-label="Show map"></button>
 
       <div class="filters" id="filters">
       <div class="field field-range" role="group" aria-label="Price, millions of yen">
@@ -228,7 +232,6 @@
       <div class="divider" id="divider" role="separator" aria-orientation="vertical" aria-label="Resize listings and map" aria-valuemin="25" aria-valuemax="75" aria-valuenow="48" tabindex="0"></div>
       <section class="map" id="map" aria-label="Map"></section>
       <div class="map-card" id="map-card" hidden></div>
-      <button type="button" id="view-toggle" class="view-toggle">Map</button>
     </div>
   </div>
 
@@ -239,11 +242,11 @@
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"
           integrity="sha256-Hk4dIpcqOSb0hZjgyvFOP+cEmDXUKKNE/tT542ZbNQg=" crossorigin=""></script>
   <script>window.IMG_BASE = "https://vinceh-tokyo-property-photos.s3.ap-northeast-1.amazonaws.com/";</script>
-  <meta name="robots" content="noindex">
-  <script src="data.js?v=29"></script>
+<meta name="robots" content="noindex">
+<script src="data.js?v=29"></script>
   <script src="land.js?v=6"></script>
   <script src="lines.js?v=4"></script>
   <script src="stations.js?v=1"></script>
-  <script src="app.js?v=138"></script>
+  <script src="app.js?v=140"></script>
 </body>
 </html>

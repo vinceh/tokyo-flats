@@ -308,7 +308,8 @@
     var k = M.sel.filter(function (s) { return state[s]; }).length +
       M.num.filter(function (s) { return state[s] != null; }).length +
       M.multi.filter(function (s) { return state[s].length; }).length;
-    filtersBtn.textContent = 'Filters' + (k ? ' · ' + k : '');
+    filtersBtn.innerHTML = icon('menu') + (k ? '<span class="badge">' + k + '</span>' : '');
+    filtersBtn.setAttribute('aria-label', 'Filters' + (k ? ', ' + k + ' active' : ''));
   }
 
   function cardEl(id) {
@@ -592,7 +593,7 @@
     });
   }
 
-  function setActive(ids) {
+  function setActive(ids, keepView) {
     activeIdsForUrl = ids;
     writeUrlSoon();
     activeIds.forEach(function (id) {
@@ -611,16 +612,34 @@
     // On a phone the frame sits above the listing's sheet.
     var pts = renderOverlays();
     var cover = sheetEl.hidden ? 0 : map.getContainer().getBoundingClientRect().bottom - sheetEl.getBoundingClientRect().top;
-    if (pts) map.flyToBounds(L.latLngBounds(pts), { padding: [72, 72], paddingBottomRight: [72, 72 + cover], maxZoom: 16, duration: 0.6 });
+    if (pts && !keepView) map.flyToBounds(L.latLngBounds(pts), { padding: [72, 72], paddingBottomRight: [72, 72 + cover], maxZoom: 16, duration: 0.6 });
   }
 
   // Phone: the one selected listing's card, as a sheet over the map. It is kept
   // while the same listing stays selected, so its photo position is not reset.
+  // Phone map card: photo, then name and price on one line, then one line of key facts.
+  function miniCardHtml(it) {
+    var st = it.nearest;
+    var facts = it.kind === 'land'
+      ? [fmtLotArea(it)].concat(shapesOf(it).filter(function (t) { return t !== 'unknown'; }).map(function (t) { return SHAPE_NAME[t] || t; }))
+      : [fmtArea(it.area) + ' · ' + esc(it.layout || ''), fmtFloor(it)];
+    if (st) facts.push(esc(st.station) + ' ' + st.walk + ' min');
+    if (it.shinjuku) facts.push('Shinjuku ~' + it.shinjuku.total + ' min');
+    return cardOpen(it).replace('class="card', 'class="card card-mini') + carouselHtml(it) +
+      '<div class="card-body">' +
+        '<div class="mini-head">' +
+          '<a class="mini-title" href="' + esc(it.url) + '" target="_blank" rel="noopener noreferrer">' + esc(titleOf(it)) + '</a>' +
+          '<strong class="mini-price">' + (it.kind === 'land' ? fmtPriceRange(it) : fmtPrice(it.priceMan)) + '</strong>' +
+        '</div>' +
+        '<div class="mini-facts">' + facts.join(' · ') + '</div>' +
+      '</div>' +
+    '</article>';
+  }
   function renderSheet() {
     var id = phone.matches && activeIds.length === 1 && cluster.hasLayer(markers[activeIds[0]]) ? activeIds[0] : '';
     if (!id) { sheetEl.hidden = true; sheetEl.dataset.id = ''; return; }
     if (sheetEl.dataset.id !== id) {
-      sheetEl.innerHTML = '<button type="button" class="sheet-x" aria-label="Close">' + icon('close') + '</button>' + cardHtml(BY_ID[id]);
+      sheetEl.innerHTML = '<button type="button" class="sheet-x" aria-label="Close">' + icon('close') + '</button>' + miniCardHtml(BY_ID[id]);
       sheetEl.dataset.id = id;
     }
     sheetEl.hidden = false;
@@ -968,10 +987,21 @@
   var viewBtn = document.getElementById('view-toggle');
   function showMap(on) {
     document.body.classList.toggle('is-map', on);
-    viewBtn.textContent = on ? 'List' : 'Map';
+    viewBtn.innerHTML = icon(on ? 'list' : 'map');
+    viewBtn.setAttribute('aria-label', on ? 'Show list' : 'Show map');
     if (on) map.invalidateSize();
   }
   viewBtn.addEventListener('click', function () { showMap(!document.body.classList.contains('is-map')); });
+
+  // On a phone the flats/land switch lives at the top of the menu; on desktop it is the title.
+  var modeHome = modeEl.parentNode, modeNext = modeEl.nextSibling, filtersEl = document.getElementById('filters');
+  function placeMode() {
+    if (phone.matches) filtersEl.insertBefore(modeEl, filtersEl.firstChild);
+    else modeHome.insertBefore(modeEl, modeNext);
+  }
+  phone.addEventListener('change', placeMode);
+  placeMode();
+  showMap(document.body.classList.contains('is-map'));
 
   function openFilters(on) {
     document.body.classList.toggle('is-filters-open', on);
@@ -1048,12 +1078,12 @@
       applyFilters();
     }
     if (phone.matches) showMap(true);
-    setActive([target]);
+    setActive([target], shared && qs.get('c') && qs.get('z'));
     scrollToCard(target);
   }
   if (shared && qs.get('c') && qs.get('z')) {
     var cc = qs.get('c').split(',').map(Number);
-    if (cc.length === 2 && !isNaN(cc[0]) && !isNaN(cc[1])) { map.stop(); map.setView(cc, +qs.get('z'), { animate: false }); }
+    if (cc.length === 2 && !isNaN(cc[0]) && !isNaN(cc[1])) { map.setView(cc, +qs.get('z'), { animate: false }); }
     // Phone: keep the shared zoom, but if the selected pin lands under the listing's
     // card, shift the map so the pin sits in the open space above the card.
     var selIt = activeIds.length === 1 && BY_ID[activeIds[0]];
