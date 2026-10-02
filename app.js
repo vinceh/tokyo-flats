@@ -1054,5 +1054,14 @@
   if (shared && qs.get('c') && qs.get('z')) {
     var cc = qs.get('c').split(',').map(Number);
     if (cc.length === 2 && !isNaN(cc[0]) && !isNaN(cc[1])) { map.stop(); map.setView(cc, +qs.get('z'), { animate: false }); }
+    // Phone: keep the shared zoom, but if the selected pin lands under the listing's
+    // card, shift the map so the pin sits in the open space above the card.
+    var selIt = activeIds.length === 1 && BY_ID[activeIds[0]];
+    if (selIt && !sheetEl.hidden) {
+      var mapBox = map.getContainer().getBoundingClientRect();
+      var open = sheetEl.getBoundingClientRect().top - mapBox.top;
+      var pin = map.latLngToContainerPoint([selIt.lat, selIt.lng]);
+      if (pin.y > open - 48) map.panBy([0, pin.y - open / 2], { animate: false });
+    }
   }
 })();
