@@ -414,7 +414,8 @@
   // Basemap: OpenFreeMap's minimal Positron vector style (free, no key), adjusted so
   // detail appears only once it's useful, like Google Maps: buildings from zoom 16,
   // small streets from 13, street names from 16. Shopping/commercial areas get a soft
-  // yellow and parks a soft green. The style's own railways are hidden; we draw ours.
+  // yellow, and parks, gardens and woods a soft green (city parks are landcover
+  // 'grass' in these tiles, which Positron leaves undrawn). The style's own railways are hidden; we draw ours.
   var ATTR = '&copy; <a href="https://openfreemap.org">OpenFreeMap</a> &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
   var c = document.createElement('canvas');
   var hasGL = !!(window.maplibregl && (c.getContext('webgl2') || c.getContext('webgl')));
@@ -428,10 +429,15 @@
     style.layers.forEach(function (l) {
       if (MIN[l.id] != null) l.minzoom = MIN[l.id];
       if (l.id === 'building') l.paint = Object.assign({}, l.paint, { 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 15.5, 0, 16.5, 1] });
-      if (l.id === 'park') l.paint = Object.assign({}, l.paint, { 'fill-color': '#d7ebd0', 'fill-opacity': 0.9 });
+      if (l.id === 'park') l.paint = Object.assign({}, l.paint, { 'fill-color': '#c6e5b9', 'fill-opacity': 0.9 });
+      if (l.id === 'landcover_wood') l.paint = Object.assign({}, l.paint, { 'fill-color': '#c6e5b9', 'fill-opacity': 1 });
     });
     var at = style.layers.findIndex(function (l) { return l.id === 'waterway'; });
     style.layers.splice(at, 0, {
+      id: 'landcover_green', type: 'fill', source: 'openmaptiles', 'source-layer': 'landcover', minzoom: 10,
+      filter: ['match', ['get', 'class'], ['grass', 'wood', 'farmland'], true, false],
+      paint: { 'fill-color': '#c6e5b9', 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 10, 0.6, 12, 1] }
+    }, {
       id: 'landuse_commercial', type: 'fill', source: 'openmaptiles', 'source-layer': 'landuse', minzoom: 12,
       filter: ['match', ['get', 'class'], ['commercial', 'retail'], true, false],
       paint: { 'fill-color': '#f6e6b4', 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 12, 0, 13, 0.7] }
