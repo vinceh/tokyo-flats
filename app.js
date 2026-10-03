@@ -430,6 +430,7 @@
       if (MIN[l.id] != null) l.minzoom = MIN[l.id];
       if (l.id === 'building') l.paint = Object.assign({}, l.paint, { 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 15.5, 0, 16.5, 1] });
       if (l.id === 'park') l.paint = Object.assign({}, l.paint, { 'fill-color': '#c6e5b9', 'fill-opacity': 0.9 });
+      if (l.id === 'water') l.paint = Object.assign({}, l.paint, { 'fill-color': '#b3d9f2' });
       if (l.id === 'landcover_wood') l.paint = Object.assign({}, l.paint, { 'fill-color': '#c6e5b9', 'fill-opacity': 1 });
     });
     var at = style.layers.findIndex(function (l) { return l.id === 'waterway'; });
@@ -437,6 +438,14 @@
       id: 'landcover_green', type: 'fill', source: 'openmaptiles', 'source-layer': 'landcover', minzoom: 10,
       filter: ['match', ['get', 'class'], ['grass', 'wood', 'farmland'], true, false],
       paint: { 'fill-color': '#c6e5b9', 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 10, 0.6, 12, 1] }
+    }, {
+      // Google-like colours for hospitals, schools, cemeteries and sports grounds.
+      id: 'landuse_places', type: 'fill', source: 'openmaptiles', 'source-layer': 'landuse', minzoom: 12,
+      filter: ['match', ['get', 'class'], ['hospital', 'school', 'university', 'college', 'kindergarten', 'cemetery', 'stadium', 'pitch', 'track', 'playground'], true, false],
+      paint: {
+        'fill-color': ['match', ['get', 'class'], 'hospital', '#f7dcdc', 'cemetery', '#d9e4d3', ['stadium', 'pitch', 'track', 'playground'], '#cdebd4', '#efe6d2'],
+        'fill-opacity': ['interpolate', ['linear'], ['zoom'], 12, 0, 13, 1]
+      }
     }, {
       id: 'landuse_commercial', type: 'fill', source: 'openmaptiles', 'source-layer': 'landuse', minzoom: 12,
       filter: ['match', ['get', 'class'], ['commercial', 'retail'], true, false],
