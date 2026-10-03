@@ -6,15 +6,21 @@
   var MODE_KEY = 'flat-tracker-mode';
   var MODES = {
     flats: { label: 'Tokyo flats', items: window.FLAT_DATA.items, saveKey: 'flat-tracker-filters', presetKey: 'flat-tracker-presets',
-      sel: ['lift', 'fav'], num: ['pmin', 'pmax', 'amin', 'amax', 'wmax', 'smax', 'fmax', 'bmin', 'bmax', 'gmax', 'mmax'], multi: [] },
+      sel: ['lift', 'fav', 'added'], num: ['pmin', 'pmax', 'amin', 'amax', 'wmax', 'smax', 'fmax', 'bmin', 'bmax', 'gmax', 'mmax'], multi: [] },
     land: { label: 'Tokyo land', items: (window.LAND_DATA || { items: [] }).items, saveKey: 'flat-tracker-land-filters', presetKey: 'flat-tracker-land-presets',
-      sel: ['roadpub', 'builder', 'setback', 'lot', 'lease', 'pfixed', 'fav'], num: ['pmin', 'pmax', 'amin', 'amax', 'wmax', 'smax', 'gmax', 'mmax', 'farmin', 'rwmin'], multi: ['shape', 'zoning'] }
+      sel: ['roadpub', 'builder', 'setback', 'lot', 'lease', 'pfixed', 'fav', 'added'], num: ['pmin', 'pmax', 'amin', 'amax', 'wmax', 'smax', 'gmax', 'mmax', 'farmin', 'rwmin'], multi: ['shape', 'zoning'] }
   };
   Object.keys(MODES).forEach(function (k) {
     var m = MODES[k];
     m.byId = {};
     m.items.forEach(function (it) { m.byId[it.id] = it; });
   });
+  // New = first found on SUUMO today (the viewer's date); the refresh stamps firstSeen.
+  var now = new Date();
+  var TODAY = now.getFullYear() + '-' + ('0' + (now.getMonth() + 1)).slice(-2) + '-' + ('0' + now.getDate()).slice(-2);
+  function isNew(it) { return it.firstSeen === TODAY; }
+  var addedNewOpt = document.querySelector('#added option[value="today"]');
+
   // Favourites: one set of listing ids for both modes, kept in this browser.
   var FAV_KEY = 'flat-tracker-favs';
   var favs = {};
@@ -157,6 +163,7 @@
 
   function applyFilters() {
     var q = state.q.trim().toLowerCase();
+    var newCount = 0;
     var out = ITEMS.filter(function (it) {
       if (q && !matches(it, q)) return false;
       // Multi-lot land lists a price and area range; it matches when the range overlaps the filter.
@@ -170,8 +177,12 @@
       if (state.gmax != null && !(it.gym && it.gym.walk <= state.gmax)) return false;
       if (state.mmax != null && !(it.supermarket && it.supermarket.walk <= state.mmax)) return false;
       if (state.fav === 'only' && !favs[it.id]) return false;
-      return mode === 'flats' ? flatsMatch(it) : landMatch(it);
+      if (!(mode === 'flats' ? flatsMatch(it) : landMatch(it))) return false;
+      // The New today count is of listings that pass every other filter.
+      if (isNew(it)) newCount++;
+      return state.added !== 'today' || isNew(it);
     });
+    addedNewOpt.textContent = 'New today · ' + newCount;
     var key = SORT[state.sort];
     // Listings missing the sort value (e.g. fees not listed) always go last.
     out.sort(function (a, b) {
@@ -215,6 +226,7 @@
           (n > 1 ?
             '<button type="button" class="carousel-btn prev" data-dir="-1" aria-label="Previous photo">' + icon('prev') + '</button>' +
             '<button type="button" class="carousel-btn next" data-dir="1" aria-label="Next photo">' + icon('next') + '</button>' : '') +
+          (isNew(it) ? '<span class="new-tag">New</span>' : '') +
           (n ? '<span class="carousel-count" aria-live="polite">' + (idx + 1) + ' / ' + n + '</span>' : '') +
           '<button type="button" class="fav-btn' + (favs[it.id] ? ' is-fav' : '') + '" aria-pressed="' + (favs[it.id] ? 'true' : 'false') + '" aria-label="Favourite">' + icon('star') + '</button>' +
           '<button type="button" class="link-btn" aria-label="Copy link to this listing">' + icon('link') + '</button>' +
@@ -513,7 +525,7 @@
 
   // Price chip on the map; favourites carry a star inside the chip.
   function pinIcon(it) {
-    return L.divIcon({ className: 'pin' + (favs[it.id] ? ' is-fav' : ''), html: '<span>' + (favs[it.id] ? '<b class="pin-star">★</b>' : '') + fmtPrice(it.priceMan) + '</span>', iconSize: null });
+    return L.divIcon({ className: 'pin' + (favs[it.id] ? ' is-fav' : '') + (isNew(it) ? ' is-new' : ''), html: '<span>' + (favs[it.id] ? '<b class="pin-star">★</b>' : '') + (isNew(it) ? '<b class="pin-new">New</b>' : '') + fmtPrice(it.priceMan) + '</span>', iconSize: null });
   }
 
   Object.keys(MODES).forEach(function (k) {
@@ -811,7 +823,7 @@
     });
   });
 
-  MODES.flats.sel.concat(MODES.land.sel).forEach(function (k) {
+  MODES.flats.sel.concat(MODES.land.sel).filter(function (k, i, all) { return all.indexOf(k) === i; }).forEach(function (k) {
     document.getElementById(k).addEventListener('change', function (e) {
       state[k] = e.target.value;
       applyFilters();

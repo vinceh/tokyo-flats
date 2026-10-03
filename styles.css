@@ -661,6 +661,13 @@ select.brand {
 .fav-btn.is-fav .icon { fill: #f5b800; stroke: #d39a00; }
 
 .pin-star { color: #f5b800; font-weight: 400; margin-right: 3px; font-size: 1.05em; }
+.pin-new,
+.new-tag {
+  display: inline-block; border-radius: 999px; background: #e8492f; color: #fff;
+  font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; line-height: 1;
+}
+.pin-new { margin-right: 4px; padding: 2px 4px; font-size: 0.72em; vertical-align: 1px; }
+.new-tag { position: absolute; left: 10px; bottom: 10px; padding: 4px 8px; font-size: 11px; }
 
 .link-btn {
   position: absolute; top: 10px; right: 52px; z-index: 2;
@@ -837,6 +844,7 @@ select.brand {
   .map-card .fav-btn .icon,
   .map-card .link-btn .icon { width: 16px; height: 16px; }
   .map-card .carousel-count { right: 6px; bottom: 6px; font-size: 11px; padding: 2px 7px; }
+  .map-card .new-tag { left: 6px; bottom: 6px; }
   .map-card .sheet-x {
     position: absolute; top: 6px; left: 6px; z-index: 3;
     width: 32px; height: 32px; border: 0; border-radius: 50%;
