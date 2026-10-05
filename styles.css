@@ -169,6 +169,11 @@ body.is-resizing * { cursor: col-resize !important; user-select: none; }
   white-space: nowrap;
 }
 .count strong { color: var(--ink); font-weight: 600; }
+.reset-btn {
+  height: 34px; padding: 0 4px; border: 0; background: none; color: var(--ink-2);
+  font: inherit; font-size: 13px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+}
+.reset-btn:hover { color: var(--ink); }
 
 /* Divider ---------------------------------------------------------------- */
 
@@ -746,7 +751,9 @@ select.brand {
   .filters > * { flex: 1 1 100%; min-width: 0; }
   .filters > .count,
   .filters > .share-btn,
+  .filters > .reset-btn,
   .filters > .sheet-close { flex: none; order: -1; }
+  .filters .reset-btn { height: 42px; font-size: 15px; }
   .filters > .count { flex: 1 1 auto; margin: 0; font-size: 15px; }
   .filters > .bar-break { display: none; }
   .filters .share-btn { height: 42px; font-size: 14px; }

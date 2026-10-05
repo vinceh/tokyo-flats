@@ -208,6 +208,7 @@
   var listEl = document.getElementById('list');
   var countEl = document.getElementById('count');
   var doneBtn = document.getElementById('filters-done');
+  var resetBtn = document.getElementById('reset');
   var filtersBtn = document.getElementById('filters-btn');
   var sheetEl = document.getElementById('map-card');
 
@@ -322,6 +323,7 @@
       M.multi.filter(function (s) { return state[s].length; }).length;
     filtersBtn.innerHTML = icon('menu') + (k ? '<span class="badge">' + k + '</span>' : '');
     filtersBtn.setAttribute('aria-label', 'Filters' + (k ? ', ' + k + ' active' : ''));
+    resetBtn.hidden = !k && !state.q;
   }
 
   function cardEl(id) {
@@ -953,6 +955,16 @@
     syncControls();
     applyFilters();
   }
+  // Reset: search and every filter back to how the page first opens; sort order is kept.
+  resetBtn.addEventListener('click', function () {
+    var s = freshState();
+    s.sort = state.sort; s.dir = state.dir;
+    state = s;
+    presetSel.value = '';
+    syncControls();
+    applyFilters();
+  });
+
   function renderPresets(selected) {
     var p = loadPresets();
     presetSel.innerHTML = '<option value="">Saved filters</option>' + Object.keys(p).sort().map(function (n) {
