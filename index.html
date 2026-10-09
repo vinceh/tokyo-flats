@@ -13,7 +13,7 @@
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
         integrity="sha256-YU3qCpj/P06tdPBJGPax0bm6Q1wltfwjsho5TR4+TYc=" crossorigin="">
-  <link rel="stylesheet" href="styles.css?v=121">
+  <link rel="stylesheet" href="styles.css?v=122">
 </head>
 <body data-mode="flats">
   <svg hidden aria-hidden="true" focusable="false">
@@ -50,6 +50,7 @@
     <symbol id="i-setback" viewBox="0 0 24 24"><path d="M4 4v16M20 12H9M12 9l-3 3 3 3"/></symbol>
     <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
     <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M15 8l2 2"/></symbol>
+    <symbol id="i-plane" viewBox="0 0 24 24"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></symbol>
   </svg>
 
   <div class="app" id="app">
@@ -57,6 +58,7 @@
       <select class="brand" id="mode" aria-label="Show">
         <option value="flats">Tokyo flats</option>
         <option value="land">Tokyo land</option>
+        <option value="home">Ideal home</option>
       </select>
 
       <div class="field field-search">
@@ -87,9 +89,10 @@
           <option value="price">Price</option>
           <option value="ppm2">Price per ㎡</option>
           <option value="area">Area</option>
-          <option value="shinjuku">Time to Shinjuku</option>
+          <option value="shinjuku" data-mode="flats land">Time to Shinjuku</option>
           <option value="fees" data-mode="flats">Monthly fees</option>
-          <option value="walk">Station walk</option>
+          <option value="walk" data-mode="flats land">Station walk</option>
+          <option value="drive" data-mode="home">Time to airport</option>
         </select>
         <button type="button" id="dir" class="dir" aria-label="Ascending, switch to descending">
           <svg class="icon" aria-hidden="true"><use href="#i-asc"/></svg>
@@ -109,12 +112,44 @@
       <button type="button" id="share" class="share-btn" aria-label="Copy a link to this view"><svg class="icon" aria-hidden="true"><use href="#i-link"/></svg><span>Share view</span></button>
 
       <div class="bar-break" aria-hidden="true"></div>
-      <div class="field field-range field-max" role="group" aria-label="Walk to nearest station, minutes">
+      <div class="field field-sort field-multi" data-mode="home">
+        <svg class="icon" aria-hidden="true"><use href="#i-house"/></svg>
+        <details class="multi" id="type" data-any="Type: any">
+          <summary></summary>
+          <div class="multi-panel"></div>
+        </details>
+      </div>
+      <div class="field field-sort field-multi" data-mode="home">
+        <svg class="icon" aria-hidden="true"><use href="#i-compass"/></svg>
+        <details class="multi" id="view" data-any="View: any">
+          <summary></summary>
+          <div class="multi-panel"></div>
+        </details>
+      </div>
+      <div class="field field-sort" data-mode="home">
+        <svg class="icon" aria-hidden="true"><use href="#i-plane"/></svg>
+        <select id="airport" aria-label="Airport">
+          <option value="">Airport: any</option>
+          <option value="NRT">Narita</option>
+          <option value="HND">Haneda</option>
+          <option value="KIX">Kansai</option>
+          <option value="NGO">Chubu</option>
+          <option value="FUK">Fukuoka</option>
+          <option value="CTS">New Chitose</option>
+          <option value="OKA">Naha</option>
+        </select>
+      </div>
+      <div class="field field-range field-max" role="group" aria-label="Drive to airport, minutes" data-mode="home">
+        <svg class="icon" aria-hidden="true"><use href="#i-pin"/></svg>
+        <input type="number" id="dmax" placeholder="Max" min="0" step="1" inputmode="numeric" aria-label="Maximum drive to airport, minutes">
+        <span class="unit" aria-hidden="true">min to airport</span>
+      </div>
+      <div class="field field-range field-max" role="group" aria-label="Walk to nearest station, minutes" data-mode="flats land">
         <svg class="icon" aria-hidden="true"><use href="#i-train"/></svg>
         <input type="number" id="wmax" placeholder="Max" min="0" step="1" inputmode="numeric" aria-label="Maximum walk to nearest station, minutes">
         <span class="unit" aria-hidden="true">min</span>
       </div>
-      <div class="field field-range field-max" role="group" aria-label="Time to Shinjuku, minutes">
+      <div class="field field-range field-max" role="group" aria-label="Time to Shinjuku, minutes" data-mode="flats land">
         <svg class="icon" aria-hidden="true"><use href="#i-pin"/></svg>
         <input type="number" id="smax" placeholder="Max" min="0" step="1" inputmode="numeric" aria-label="Maximum time to shinjuku, minutes">
         <span class="unit" aria-hidden="true">min to Shinjuku</span>
@@ -130,12 +165,12 @@
         <span class="dash" aria-hidden="true">–</span>
         <input type="number" id="bmax" placeholder="To" min="1900" step="1" inputmode="numeric" aria-label="Built up to year">
       </div>
-      <div class="field field-range field-max" role="group" aria-label="Walk to Anytime Fitness, minutes">
+      <div class="field field-range field-max" role="group" aria-label="Walk to Anytime Fitness, minutes" data-mode="flats land">
         <svg class="icon" aria-hidden="true"><use href="#i-gym"/></svg>
         <input type="number" id="gmax" placeholder="Max" min="0" step="1" inputmode="numeric" aria-label="Maximum walk to anytime fitness, minutes">
         <span class="unit" aria-hidden="true">min</span>
       </div>
-      <div class="field field-range field-max" role="group" aria-label="Walk to supermarket, minutes">
+      <div class="field field-range field-max" role="group" aria-label="Walk to supermarket, minutes" data-mode="flats land">
         <svg class="icon" aria-hidden="true"><use href="#i-cart"/></svg>
         <input type="number" id="mmax" placeholder="Max" min="0" step="1" inputmode="numeric" aria-label="Maximum walk to supermarket, minutes">
         <span class="unit" aria-hidden="true">min</span>
@@ -259,8 +294,9 @@
 <meta name="robots" content="noindex">
 <script src="data.js?v=38"></script>
   <script src="land.js?v=15"></script>
+  <script src="home.js?v=2"></script>
   <script src="lines.js?v=4"></script>
   <script src="stations.js?v=1"></script>
-  <script src="app.js?v=146"></script>
+  <script src="app.js?v=147"></script>
 </body>
 </html>

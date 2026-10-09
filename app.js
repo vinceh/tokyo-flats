@@ -1,15 +1,22 @@
 (function () {
   'use strict';
 
-  // Two modes, each with its own listings, filters and saved filter sets.
-  // land.js is regenerated while the page is in use, so it may be missing.
+  // Three modes, each with its own listings, filters and saved filter sets.
+  // land.js and home.js are regenerated while the page is in use, so they may be missing.
   var MODE_KEY = 'flat-tracker-mode';
   var MODES = {
     flats: { label: 'Tokyo flats', items: window.FLAT_DATA.items, saveKey: 'flat-tracker-filters', presetKey: 'flat-tracker-presets',
       sel: ['lift', 'fav', 'added'], num: ['pmin', 'pmax', 'amin', 'amax', 'wmax', 'smax', 'fmax', 'bmin', 'bmax', 'gmax', 'mmax'], multi: [] },
     land: { label: 'Tokyo land', items: (window.LAND_DATA || { items: [] }).items, saveKey: 'flat-tracker-land-filters', presetKey: 'flat-tracker-land-presets',
-      sel: ['roadpub', 'builder', 'setback', 'lot', 'lease', 'pfixed', 'fav', 'added'], num: ['pmin', 'pmax', 'amin', 'amax', 'wmax', 'smax', 'gmax', 'mmax', 'farmin', 'rwmin'], multi: ['shape', 'zoning'] }
+      sel: ['roadpub', 'builder', 'setback', 'lot', 'lease', 'pfixed', 'fav', 'added'], num: ['pmin', 'pmax', 'amin', 'amax', 'wmax', 'smax', 'gmax', 'mmax', 'farmin', 'rwmin'], multi: ['shape', 'zoning'] },
+    home: { label: 'Ideal home', items: (window.HOME_DATA || { items: [] }).items, saveKey: 'flat-tracker-home-filters', presetKey: 'flat-tracker-home-presets',
+      sel: ['airport', 'fav', 'added'], num: ['pmin', 'pmax', 'amin', 'amax', 'dmax'], multi: ['type', 'view'] }
   };
+  // Home listings carry price and lot area; the per-㎡ and per-tsubo prices are worked out here.
+  MODES.home.items.forEach(function (it) {
+    it.pricePerM2Man = it.priceMan / it.area;
+    it.pricePerTsuboMan = it.pricePerM2Man * 3.30579;
+  });
   Object.keys(MODES).forEach(function (k) {
     var m = MODES[k];
     m.byId = {};
@@ -26,7 +33,8 @@
   var favs = {};
   try { favs = JSON.parse(localStorage.getItem(FAV_KEY) || '{}') || {}; } catch (e) {}
   function saveFavs() { try { localStorage.setItem(FAV_KEY, JSON.stringify(favs)); } catch (e) {} }
-  var mode = localStorage.getItem(MODE_KEY) === 'land' ? 'land' : 'flats';
+  var mode = localStorage.getItem(MODE_KEY);
+  if (mode !== 'land' && mode !== 'home') mode = 'flats';
   var M = MODES[mode];
   var ITEMS = M.items;
   var BY_ID = M.byId;
@@ -84,6 +92,12 @@
   var SHAPE_NAME = {}, ZONE_NAME = {};
   SHAPES.forEach(function (s) { SHAPE_NAME[s[0]] = s[1]; });
   ZONES.forEach(function (z) { ZONE_NAME[z[0]] = z[1]; });
+  var HOME_TYPES = [['land', 'Vacant land'], ['oldhouse', 'Old house on lot'], ['renovated', 'Renovated'], ['newbuild', 'New build']];
+  var VIEWS = [['sea', 'Sea view'], ['mountain', 'Mountain view'], ['lake', 'Lake view'], ['river', 'River view'], ['forest', 'Forest view']];
+  var HOME_TYPE_NAME = {}, VIEW_NAME = {};
+  HOME_TYPES.forEach(function (t) { HOME_TYPE_NAME[t[0]] = t[1]; });
+  VIEWS.forEach(function (v) { VIEW_NAME[v[0]] = v[1]; });
+  function isHouse(it) { return it.type === 'renovated' || it.type === 'newbuild'; }
   function shapesOf(it) { return it.shape && it.shape.length ? it.shape : ['unknown']; }
   function fmtRatios(it) {
     if (it.coverage != null && it.far != null) return it.coverage + '/' + it.far + '%';
@@ -127,12 +141,13 @@
     area: function (it) { return it.area; },
     shinjuku: function (it) { return it.shinjuku ? it.shinjuku.total : null; },
     fees: function (it) { return it.feesTotal; },
-    walk: function (it) { return it.nearest ? it.nearest.walk : null; }
+    walk: function (it) { return it.nearest ? it.nearest.walk : null; },
+    drive: function (it) { return it.airport ? it.airport.minutes : null; }
   };
 
   function matches(it, q) {
     var st = it.nearest || {};
-    var hay = [it.name, it.nameEn, it.address, st.station, st.stationEn, st.line]
+    var hay = [it.name, it.nameEn, it.address, it.pref, st.station, st.stationEn, st.line, it.airport && it.airport.name]
       .filter(Boolean).join(' ').toLowerCase();
     return hay.indexOf(q) !== -1;
   }
@@ -161,6 +176,15 @@
     return true;
   }
 
+  function homeMatch(it) {
+    if (state.type.length && state.type.indexOf(it.type) === -1) return false;
+    if (state.view.length && !it.views.some(function (v) { return state.view.indexOf(v) !== -1; })) return false;
+    if (state.airport && it.airport.code !== state.airport) return false;
+    if (state.dmax != null && !(it.airport.minutes <= state.dmax)) return false;
+    return true;
+  }
+  var MODE_MATCH = { flats: flatsMatch, land: landMatch, home: homeMatch };
+
   function applyFilters() {
     var q = state.q.trim().toLowerCase();
     var newCount = 0;
@@ -177,7 +201,7 @@
       if (state.gmax != null && !(it.gym && it.gym.walk <= state.gmax)) return false;
       if (state.mmax != null && !(it.supermarket && it.supermarket.walk <= state.mmax)) return false;
       if (state.fav === 'only' && !favs[it.id]) return false;
-      if (!(mode === 'flats' ? flatsMatch(it) : landMatch(it))) return false;
+      if (!MODE_MATCH[mode](it)) return false;
       // The New today count is of listings that pass every other filter.
       if (isNew(it)) newCount++;
       return state.added !== 'today' || isNew(it);
@@ -276,8 +300,34 @@
       '</article>';
   }
 
+  function homeCardHtml(it) {
+    var ap = it.airport;
+    return cardOpen(it) + carouselHtml(it) +
+        '<div class="card-body">' +
+          '<h2 class="card-title">' +
+            '<a href="' + esc(it.url) + '" target="_blank" rel="noopener noreferrer">' + esc(titleOf(it)) + '</a>' +
+            (it.name ? '<span class="en">' + esc(it.address) + '</span>' : '') +
+          '</h2>' +
+          '<div class="card-price"><strong>' + fmtPrice(it.priceMan) + '</strong>' +
+            (isHouse(it) ? '' : '<span>' + fmtPerM2(it.pricePerM2Man) + ' · ' + fmtPerTsubo(it.pricePerTsuboMan) + '</span>') + '</div>' +
+          '<ul class="tags">' +
+            '<li>' + esc(HOME_TYPE_NAME[it.type] || it.type) + '</li>' +
+            it.views.map(function (v) { return '<li class="view">' + esc(VIEW_NAME[v] || v) + '</li>'; }).join('') +
+          '</ul>' +
+          '<ul class="specs">' +
+            '<li class="wide">' + icon('area') + '<span><b>' + fmtLotArea(it) + '</b></span></li>' +
+            (isHouse(it) ? '<li class="wide">' + icon('house') + '<span><b>' + fmtArea(it.floorArea) + '</b>' + (it.layout ? ' · ' + esc(it.layout) : '') + (it.built ? ' · Built <b>' + esc(it.built.slice(0, 4)) + '</b>' : '') + '</span></li>' : '') +
+            '<li class="wide">' + icon('plane') + '<span><b>' + esc(ap.name) + '</b> · ' + ap.minutes + ' min drive</span></li>' +
+            stationLi(it.nearest) +
+            (it.viewNote ? '<li class="wide">' + icon('compass') + '<span>' + esc(it.viewNote) + '</span></li>' : '') +
+          '</ul>' +
+        '</div>' +
+      '</article>';
+  }
+
   function cardHtml(it) {
     if (mode === 'land') return landCardHtml(it);
+    if (mode === 'home') return homeCardHtml(it);
     var facing = it.facing && FACING[it.facing];
     var st = it.nearest;
 
@@ -410,8 +460,13 @@
 
   var map = L.map('map', { zoomControl: false, maxZoom: 18, zoomSnap: 1, worldCopyJump: false });
   // Open on central Tokyo; the few outlying listings (Hachioji etc.) are a pan away.
-  var CENTRAL = (ITEMS.length ? ITEMS : MODES.flats.items).filter(function (it) { return it.lat > 35.55 && it.lat < 35.82 && it.lng > 139.58 && it.lng < 139.92; });
-  map.fitBounds(L.latLngBounds(CENTRAL.map(function (it) { return [it.lat, it.lng]; })), { padding: [32, 32] });
+  // Ideal home spans all of Japan, so it opens fitted to every home listing instead.
+  var CENTRAL = (mode !== 'home' && ITEMS.length ? ITEMS : MODES.flats.items).filter(function (it) { return it.lat > 35.55 && it.lat < 35.82 && it.lng > 139.58 && it.lng < 139.92; });
+  function fitMode() {
+    var pts = mode === 'home' ? ITEMS : CENTRAL;
+    if (pts.length) map.fitBounds(L.latLngBounds(pts.map(function (it) { return [it.lat, it.lng]; })), { padding: [32, 32], animate: false });
+  }
+  fitMode();
   L.control.zoom({ position: 'topright' }).addTo(map);
   // Basemap: OpenFreeMap's minimal Positron vector style (free, no key), adjusted so
   // detail appears only once it's useful, like Google Maps: buildings from zoom 16,
@@ -649,11 +704,17 @@
   // Phone map card: photo, then name and price on one line, then one line of key facts.
   function miniCardHtml(it) {
     var st = it.nearest;
-    var facts = it.kind === 'land'
-      ? [fmtLotArea(it)].concat(shapesOf(it).filter(function (t) { return t !== 'unknown'; }).map(function (t) { return SHAPE_NAME[t] || t; }))
-      : [fmtArea(it.area) + ' · ' + esc(it.layout || ''), fmtFloor(it)];
-    if (st) facts.push(esc(st.station) + ' ' + st.walk + ' min');
-    if (it.shinjuku) facts.push('Shinjuku ~' + it.shinjuku.total + ' min');
+    var facts;
+    if (it.kind === 'home') {
+      facts = [HOME_TYPE_NAME[it.type] || it.type, fmtLotArea(it), esc(it.airport.name) + ' ' + it.airport.minutes + ' min drive'];
+      if (it.views.length) facts.push(VIEW_NAME[it.views[0]] || it.views[0]);
+    } else {
+      facts = it.kind === 'land'
+        ? [fmtLotArea(it)].concat(shapesOf(it).filter(function (t) { return t !== 'unknown'; }).map(function (t) { return SHAPE_NAME[t] || t; }))
+        : [fmtArea(it.area) + ' · ' + esc(it.layout || ''), fmtFloor(it)];
+      if (st) facts.push(esc(st.station) + ' ' + st.walk + ' min');
+      if (it.shinjuku) facts.push('Shinjuku ~' + it.shinjuku.total + ' min');
+    }
     return cardOpen(it).replace('class="card', 'class="card card-mini') + carouselHtml(it) +
       '<div class="card-body">' +
         '<div class="mini-head">' +
@@ -681,8 +742,9 @@
 
   // Selection overlays: with exactly one unit selected (and still on the map),
   // its nearest station, Anytime Fitness and supermarket each get a badge, a
-  // dotted line from the unit and a walk label at the line's midpoint.
-  // Returns the four points, or null when nothing is drawn.
+  // dotted line from the unit and a walk label at the line's midpoint. A home
+  // listing gets its airport instead (its station has no coordinates).
+  // Returns the points, or null when nothing is drawn.
   var overlays = L.layerGroup().addTo(map);
 
   // Walk labels are placed in screen space after every zoom: each tries points along
@@ -728,15 +790,16 @@
     labelLayer.clearLayers();
     var it = activeIds.length === 1 && BY_ID[activeIds[0]];
     if (!it || !cluster.hasLayer(markers[it.id])) it = null;
-    var key = it && it.nearest ? it.nearest.lat + ',' + it.nearest.lng : '';
+    var key = it && it.nearest && it.nearest.lat != null ? it.nearest.lat + ',' + it.nearest.lng : '';
     if (key !== badgedStation) { badgedStation = key; renderStations(); }
     if (!it) return null;
     var home = [it.lat, it.lng];
-    var st = it.nearest, gym = it.gym, sm = it.supermarket;
+    var st = it.nearest, gym = it.gym, sm = it.supermarket, ap = it.airport;
     return [home].concat([
-      st && ['station', 'train', st, st.station + (st.en ? ' ' + st.en : ''), st.walk + ' min'],
+      st && st.lat != null && ['station', 'train', st, st.station + (st.en ? ' ' + st.en : ''), st.walk + ' min'],
       gym && ['gym', 'gym', gym, gym.name, gym.walk + ' min · ' + gym.meters + ' m'],
-      sm && ['market', 'cart', sm, sm.name, sm.walk + ' min · ' + sm.meters + ' m']
+      sm && ['market', 'cart', sm, sm.name, sm.walk + ' min · ' + sm.meters + ' m'],
+      ap && ['airport', 'plane', ap, ap.name, ap.minutes + ' min drive']
     ].filter(Boolean).map(function (o) {
       var kind = o[0], to = [o[2].lat, o[2].lng];
       L.polyline([home, to], { className: 'walk-line is-' + kind, interactive: false }).addTo(overlays);
@@ -832,23 +895,27 @@
     qTimer = setTimeout(function () { state.q = qEl.value; applyFilters(); }, 120);
   });
 
-  var ALL_NUM = MODES.flats.num.concat(MODES.land.num.filter(function (k) { return MODES.flats.num.indexOf(k) === -1; }));
-  ALL_NUM.forEach(function (k) {
+  // Every control of every mode, once each.
+  function allKeys(kind) {
+    return Object.keys(MODES).reduce(function (all, m) { return all.concat(MODES[m][kind]); }, [])
+      .filter(function (k, i, all) { return all.indexOf(k) === i; });
+  }
+  allKeys('num').forEach(function (k) {
     document.getElementById(k).addEventListener('input', function (e) {
       state[k] = num(e.target.value);
       applyFilters();
     });
   });
 
-  MODES.flats.sel.concat(MODES.land.sel).filter(function (k, i, all) { return all.indexOf(k) === i; }).forEach(function (k) {
+  allKeys('sel').forEach(function (k) {
     document.getElementById(k).addEventListener('change', function (e) {
       state[k] = e.target.value;
       applyFilters();
     });
   });
 
-  // Shape and zoning: a dropdown of checkboxes. Nothing ticked means any.
-  var MULTI_OPTS = { shape: SHAPES, zoning: ZONES };
+  // Shape, zoning, home type and view: a dropdown of checkboxes. Nothing ticked means any.
+  var MULTI_OPTS = { shape: SHAPES, zoning: ZONES, type: HOME_TYPES, view: VIEWS };
   function renderMultiLabel(k) {
     var el = document.getElementById(k), v = state[k], names = MULTI_OPTS[k].filter(function (o) { return v.indexOf(o[0]) !== -1; });
     el.querySelector('summary').textContent = !names.length ? el.dataset.any : names[0][1] + (names.length > 1 ? ' +' + (names.length - 1) : '');
@@ -908,7 +975,12 @@
   function saveFilters() {
     try { localStorage.setItem(M.saveKey, JSON.stringify(currentFilters())); } catch (e) {}
   }
-  function sortOk(k) { return SORT[k] && (k !== 'fees' || mode === 'flats'); }
+  // A sort is allowed when its option is offered in this mode.
+  function inMode(el) { return !el.dataset.mode || el.dataset.mode.split(' ').indexOf(mode) !== -1; }
+  function sortOk(k) {
+    var o = SORT[k] && document.querySelector('#sort option[value="' + k + '"]');
+    return !!o && inMode(o);
+  }
   function restoreFilters() {
     var saved;
     try { saved = JSON.parse(localStorage.getItem(M.saveKey) || 'null'); } catch (e) { saved = null; }
@@ -1005,7 +1077,7 @@
     document.body.dataset.mode = m;
     document.title = M.label;
     modeEl.value = m;
-    [].forEach.call(sortEl.options, function (o) { o.hidden = o.disabled = !!o.dataset.mode && o.dataset.mode !== m; });
+    [].forEach.call(sortEl.options, function (o) { o.hidden = o.disabled = !inMode(o); });
     state = freshState();
     restoreFilters();
     syncControls();
@@ -1016,7 +1088,10 @@
     setMapHover([], false);
     setHover(null, false);
     activeIds = []; carouselIdx = {}; lastKey = '';
+    var wasHome = mode === 'home';
     enterMode(modeEl.value);
+    // Home is all of Japan and the other two are Tokyo: crossing between them reframes the map.
+    if (wasHome !== (mode === 'home')) fitMode();
     listEl.scrollTop = 0;
     applyFilters();
   });
@@ -1092,11 +1167,12 @@
 
   // Opening a shared view (or an older #<mode>/<id> permalink).
   var qs = new URLSearchParams(location.search);
-  var link = /^#(flats|land)\/(.+)$/.exec(location.hash);
+  var link = /^#(flats|land|home)\/(.+)$/.exec(location.hash);
   var shared = qs.has('m') && MODES[qs.get('m')];
   if (shared) mode = qs.get('m');
   else if (link && MODES[link[1]] && MODES[link[1]].byId[decodeURIComponent(link[2])]) mode = link[1];
   enterMode(mode);
+  fitMode();
   if (shared) {
     state = freshState();
     state.q = qs.get('q') || '';

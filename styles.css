@@ -12,6 +12,7 @@
   --station: #2f5f8f;
   --gym: #7a4a8c;
   --market: #b0621c;
+  --airport: #3d5fb8;
   --radius: 14px;
   --radius-sm: 9px;
   --shadow: 0 1px 2px rgba(25, 24, 15, 0.05), 0 10px 28px -14px rgba(25, 24, 15, 0.22);
@@ -512,6 +513,7 @@ body.is-resizing .divider::after,
 .is-station { --c: var(--station); }
 .is-gym { --c: var(--gym); }
 .is-market { --c: var(--market); }
+.is-airport { --c: var(--airport); }
 
 .walk-line {
   stroke: var(--c);
@@ -572,9 +574,10 @@ body.is-resizing .divider::after,
 }
 .preset-update[hidden] { display: none; }
 
-/* Modes: controls tagged with a mode show only in that mode. */
-body[data-mode="flats"] [data-mode="land"],
-body[data-mode="land"] [data-mode="flats"] { display: none; }
+/* Modes: controls tagged with modes (data-mode="flats land") show only in those modes. */
+body[data-mode="flats"] [data-mode]:not([data-mode~="flats"]),
+body[data-mode="land"] [data-mode]:not([data-mode~="land"]),
+body[data-mode="home"] [data-mode]:not([data-mode~="home"]) { display: none; }
 
 select.brand {
   appearance: none;
@@ -604,6 +607,11 @@ select.brand {
   color: var(--ink-2);
   font-size: 12px;
   font-weight: 550;
+}
+.tags li.view {
+  background: var(--accent-soft);
+  border-color: #c7dfd2;
+  color: var(--accent-deep);
 }
 .tags li.flag {
   background: #fbefe3;
