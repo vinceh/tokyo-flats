@@ -10,7 +10,7 @@
     land: { label: 'Tokyo land', items: (window.LAND_DATA || { items: [] }).items, saveKey: 'flat-tracker-land-filters', presetKey: 'flat-tracker-land-presets',
       sel: ['roadpub', 'builder', 'setback', 'lot', 'lease', 'pfixed', 'fav', 'added'], num: ['pmin', 'pmax', 'amin', 'amax', 'wmax', 'smax', 'gmax', 'mmax', 'farmin', 'rwmin'], multi: ['shape', 'zoning'] },
     home: { label: 'Ideal home', items: (window.HOME_DATA || { items: [] }).items, saveKey: 'flat-tracker-home-filters', presetKey: 'flat-tracker-home-presets',
-      sel: ['airport', 'fav', 'added'], num: ['pmin', 'pmax', 'amin', 'amax', 'dmax'], multi: ['type', 'view'] }
+      sel: ['airport', 'fav', 'added'], num: ['pmin', 'pmax', 'amin', 'amax', 'dmax', 'wmax', 'gmax', 'mmax'], multi: ['type', 'view'] }
   };
   // Home listings carry price and lot area; the per-㎡ and per-tsubo prices are worked out here.
   MODES.home.items.forEach(function (it) {
@@ -329,6 +329,7 @@
             houseLi(it) +
             '<li class="wide">' + icon('plane') + '<span><b>' + esc(ap.name) + '</b> · ' + ap.minutes + ' min drive</span></li>' +
             stationLi(it.nearest) +
+            gymLi(it) +
             (it.viewNote ? '<li class="wide">' + icon('compass') + '<span>' + esc(it.viewNote) + '</span></li>' : '') +
           '</ul>' +
         '</div>' +
