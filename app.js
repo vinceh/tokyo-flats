@@ -300,6 +300,16 @@
       '</article>';
   }
 
+  // Floor area · layout · year built, each only when SUUMO gives it (a new-build plan may have none yet).
+  function houseLi(it) {
+    if (!isHouse(it)) return '';
+    var parts = [];
+    if (it.floorArea != null) parts.push('<b>' + fmtArea(it.floorArea) + '</b>');
+    if (it.layout && it.layout !== '-') parts.push(esc(it.layout));
+    if (it.built) parts.push('Built <b>' + esc(it.built.slice(0, 4)) + '</b>');
+    return parts.length ? '<li class="wide">' + icon('house') + '<span>' + parts.join(' · ') + '</span></li>' : '';
+  }
+
   function homeCardHtml(it) {
     var ap = it.airport;
     return cardOpen(it) + carouselHtml(it) +
@@ -316,7 +326,7 @@
           '</ul>' +
           '<ul class="specs">' +
             '<li class="wide">' + icon('area') + '<span><b>' + fmtLotArea(it) + '</b></span></li>' +
-            (isHouse(it) ? '<li class="wide">' + icon('house') + '<span><b>' + fmtArea(it.floorArea) + '</b>' + (it.layout ? ' · ' + esc(it.layout) : '') + (it.built ? ' · Built <b>' + esc(it.built.slice(0, 4)) + '</b>' : '') + '</span></li>' : '') +
+            houseLi(it) +
             '<li class="wide">' + icon('plane') + '<span><b>' + esc(ap.name) + '</b> · ' + ap.minutes + ' min drive</span></li>' +
             stationLi(it.nearest) +
             (it.viewNote ? '<li class="wide">' + icon('compass') + '<span>' + esc(it.viewNote) + '</span></li>' : '') +
