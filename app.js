@@ -24,9 +24,21 @@
   });
   // New = first found on SUUMO today (the viewer's date); the refresh stamps firstSeen.
   var now = new Date();
-  var TODAY = now.getFullYear() + '-' + ('0' + (now.getMonth() + 1)).slice(-2) + '-' + ('0' + now.getDate()).slice(-2);
+  function dayStr(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  var TODAY = dayStr(now);
   function isNew(it) { return it.firstSeen === TODAY; }
-  var addedNewOpt = document.querySelector('#added option[value="today"]');
+  // The "Listed" picker offers each of the last 5 days (Vin, 2026-10-14). Values are relative
+  // ('today', 'd1'..'d4' days ago), so a saved filter or shared link keeps meaning "yesterday".
+  var ADDED_DAY = {};
+  var addedOpts = ['today', 'd1', 'd2', 'd3', 'd4'].map(function (v, i) {
+    var d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+    var o = document.createElement('option');
+    o.value = v;
+    o.dataset.label = i === 0 ? 'New today' : i === 1 ? 'Yesterday' : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    ADDED_DAY[v] = dayStr(d);
+    document.getElementById('added').appendChild(o);
+    return o;
+  });
 
   // Favourites: one set of listing ids for both modes, kept in this browser.
   var FAV_KEY = 'flat-tracker-favs';
@@ -187,7 +199,7 @@
 
   function applyFilters() {
     var q = state.q.trim().toLowerCase();
-    var newCount = 0;
+    var dayCount = {};
     var out = ITEMS.filter(function (it) {
       if (q && !matches(it, q)) return false;
       // Multi-lot land lists a price and area range; it matches when the range overlaps the filter.
@@ -202,11 +214,11 @@
       if (state.mmax != null && !(it.supermarket && it.supermarket.walk <= state.mmax)) return false;
       if (state.fav === 'only' && !favs[it.id]) return false;
       if (!MODE_MATCH[mode](it)) return false;
-      // The New today count is of listings that pass every other filter.
-      if (isNew(it)) newCount++;
-      return state.added !== 'today' || isNew(it);
+      // Each day's count is of listings that pass every other filter.
+      dayCount[it.firstSeen] = (dayCount[it.firstSeen] || 0) + 1;
+      return !state.added || it.firstSeen === ADDED_DAY[state.added];
     });
-    addedNewOpt.textContent = 'New today · ' + newCount;
+    addedOpts.forEach(function (o) { o.textContent = o.dataset.label + ' · ' + (dayCount[ADDED_DAY[o.value]] || 0); });
     var key = SORT[state.sort];
     // Listings missing the sort value (e.g. fees not listed) always go last.
     out.sort(function (a, b) {
