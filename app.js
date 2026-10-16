@@ -160,7 +160,7 @@
   function matches(it, q) {
     var st = it.nearest || {};
     var hay = [it.name, it.nameEn, it.address, it.pref, st.station, st.stationEn, st.line, it.airport && it.airport.name]
-      .filter(Boolean).join(' ').toLowerCase();
+      .filter(Boolean).join(' ').normalize('NFKC').toLowerCase();
     return hay.indexOf(q) !== -1;
   }
 
@@ -198,7 +198,8 @@
   var MODE_MATCH = { flats: flatsMatch, land: landMatch, home: homeMatch };
 
   function applyFilters() {
-    var q = state.q.trim().toLowerCase();
+    // NFKC on both sides: SUUMO addresses use full-width digits ("成城７"), people type "成城7".
+    var q = state.q.trim().normalize('NFKC').toLowerCase();
     var dayCount = {};
     var out = ITEMS.filter(function (it) {
       if (q && !matches(it, q)) return false;
