@@ -5,11 +5,11 @@
   // land.js and home.js are regenerated while the page is in use, so they may be missing.
   var MODE_KEY = 'flat-tracker-mode';
   var MODES = {
-    flats: { label: 'Tokyo flats', items: window.FLAT_DATA.items, saveKey: 'flat-tracker-filters', presetKey: 'flat-tracker-presets',
+    flats: { items: window.FLAT_DATA.items, saveKey: 'flat-tracker-filters', presetKey: 'flat-tracker-presets',
       sel: ['lift', 'fav', 'added'], num: ['pmin', 'pmax', 'amin', 'amax', 'wmax', 'smax', 'fmax', 'bmin', 'bmax', 'gmax', 'mmax'], multi: [] },
-    land: { label: 'Tokyo land', items: (window.LAND_DATA || { items: [] }).items, saveKey: 'flat-tracker-land-filters', presetKey: 'flat-tracker-land-presets',
+    land: { items: (window.LAND_DATA || { items: [] }).items, saveKey: 'flat-tracker-land-filters', presetKey: 'flat-tracker-land-presets',
       sel: ['roadpub', 'builder', 'setback', 'lot', 'lease', 'pfixed', 'fav', 'added'], num: ['pmin', 'pmax', 'amin', 'amax', 'wmax', 'smax', 'gmax', 'mmax', 'farmin', 'rwmin'], multi: ['shape', 'zoning'] },
-    home: { label: 'Ideal home', items: (window.HOME_DATA || { items: [] }).items, saveKey: 'flat-tracker-home-filters', presetKey: 'flat-tracker-home-presets',
+    home: { items: (window.HOME_DATA || { items: [] }).items, saveKey: 'flat-tracker-home-filters', presetKey: 'flat-tracker-home-presets',
       sel: ['airport', 'fav', 'added'], num: ['pmin', 'pmax', 'amin', 'amax', 'dmax', 'wmax', 'gmax', 'mmax'], multi: ['type', 'view'] }
   };
   // Home listings carry price and lot area; the per-㎡ and per-tsubo prices are worked out here.
@@ -22,6 +22,13 @@
     m.byId = {};
     m.items.forEach(function (it) { m.byId[it.id] = it; });
   });
+  // Every word the site shows comes from i18n.js; prices and dates are written the chosen language's way.
+  var t = window.I18N.t, fmt = window.I18N.fmt;
+  // The English romanised names beside Japanese ones (station, building) show only in English.
+  function showEn() { return window.I18N.lang() === 'en'; }
+  // A label for a code from the data, or the code itself when the strings file has none.
+  function name(prefix, code) { var k = prefix + '.' + code, v = t(k); return v === k ? code : v; }
+
   // New = first found on SUUMO today (the viewer's date); the refresh stamps firstSeen.
   var now = new Date();
   function dayStr(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
@@ -30,15 +37,19 @@
   // The "Listed" picker offers each of the last 5 days (Vin, 2026-10-14). Values are relative
   // ('today', 'd1'..'d4' days ago), so a saved filter or shared link keeps meaning "yesterday".
   var ADDED_DAY = {};
+  var addedDates = [];
   var addedOpts = ['today', 'd1', 'd2', 'd3', 'd4'].map(function (v, i) {
     var d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
     var o = document.createElement('option');
     o.value = v;
-    o.dataset.label = i === 0 ? 'New today' : i === 1 ? 'Yesterday' : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    addedDates.push(d);
     ADDED_DAY[v] = dayStr(d);
     document.getElementById('added').appendChild(o);
     return o;
   });
+  function addedLabel(i) {
+    return i === 0 ? t('added.today') : i === 1 ? t('added.yesterday') : addedDates[i].toLocaleDateString(fmt().dateLocale, { day: 'numeric', month: 'short' });
+  }
 
   // Favourites: one set of listing ids for both modes, kept in this browser.
   var FAV_KEY = 'flat-tracker-favs';
@@ -55,66 +66,58 @@
 
   var FACING = { '南': 'S', '南東': 'SE', '南西': 'SW', '東': 'E', '西': 'W', '北': 'N', '北東': 'NE', '北西': 'NW' };
 
-  function fmtPrice(man) { return '¥' + (man / 100).toFixed(1) + 'M'; }
-
-  function fmtPerM2(man) {
-    var k = man * 10;
-    return k >= 1000 ? '¥' + (k / 1000).toFixed(2) + 'M/㎡' : '¥' + Math.round(k) + 'k/㎡';
-  }
-
-  function fmtFees(yen) { return yen == null ? 'Fees not listed' : '¥' + yen.toLocaleString('en-US') + '/mo'; }
+  function fmtPrice(man) { return fmt().price(man); }
+  function fmtPerM2(man) { return fmt().perM2(man); }
+  function fmtFees(yen) { return yen == null ? t('card.feesNotListed') : fmt().fees(yen); }
 
   // 'yes'/'no' come from the listing text; 6+ floor buildings without a tag are 'likely'.
   function fmtLift(it) {
-    if (it.lift === 'yes') return '<b>Lift</b>';
-    if (it.lift === 'no') return '<b>No lift</b>';
-    if (it.buildingFloors >= 6) return 'Lift likely';
-    return '<span class="en">Lift unknown</span>';
+    if (it.lift === 'yes') return '<b>' + t('card.lift') + '</b>';
+    if (it.lift === 'no') return '<b>' + t('card.noLift') + '</b>';
+    if (it.buildingFloors >= 6) return t('card.liftLikely');
+    return '<span class="en">' + t('card.liftUnknown') + '</span>';
   }
-  function fmtFloor(it) { return (it.floor || '?').replace(/階/g, 'F') + (it.buildingFloors ? ' / ' + it.buildingFloors + 'F' : ''); }
+  function fmtFloor(it) { return (it.floor || '?').replace(/階/g, t('card.floorSuffix')) + (it.buildingFloors ? ' / ' + t('card.storeys', { n: it.buildingFloors }) : ''); }
 
   function fmtArea(a) { return (Number.isInteger(a) ? a : a.toFixed(1)) + ' ㎡'; }
 
   // Land: ranges for multi-lot developments, tsubo alongside ㎡.
   function fmtPriceRange(it) {
-    return fmtPrice(it.priceMan) + (it.priceMaxMan > it.priceMan ? '–' + (it.priceMaxMan / 100).toFixed(1) + 'M' : '');
+    return it.priceMaxMan > it.priceMan ? fmt().priceRange(it.priceMan, it.priceMaxMan) : fmtPrice(it.priceMan);
   }
-  function fmtPerTsubo(man) {
-    var k = man * 10;
-    return k >= 1000 ? '¥' + (k / 1000).toFixed(1) + 'M/tsubo' : '¥' + Math.round(k) + 'k/tsubo';
-  }
+  function fmtPerTsubo(man) { return fmt().perTsubo(man); }
   function num1(a) { return Number.isInteger(a) ? a : a.toFixed(1); }
   function fmtLotArea(it) {
     var r = it.areaMax > it.area;
     var tsubo = function (a) { return (a / 3.30579).toFixed(1); };
-    return num1(it.area) + (r ? '–' + num1(it.areaMax) : '') + ' ㎡ · ' + tsubo(it.area) + (r ? '–' + tsubo(it.areaMax) : '') + ' tsubo';
+    return t('card.lotArea', { m2: num1(it.area) + (r ? '–' + num1(it.areaMax) : ''), tsubo: tsubo(it.area) + (r ? '–' + tsubo(it.areaMax) : '') });
   }
   function fmtRoad(r) {
     var parts = [];
-    var dirs = (r && r.roads || []).map(function (x) { return (x.dir ? x.dir + ' ' : '') + (x.width != null ? x.width.toFixed(1) + 'm' : ''); });
-    var kind = r && r.private === true ? 'private road' : r && r.private === false ? 'public road' : 'road';
-    if (dirs.length) parts.push(dirs.join(', ') + ' ' + kind);
-    else if (r && r.width != null) parts.push(r.width.toFixed(1) + 'm ' + kind);
-    else if (r && r.private != null) parts.push(kind.charAt(0).toUpperCase() + kind.slice(1));
-    if (r && r.frontage != null) parts.push(r.frontage.toFixed(1) + 'm frontage');
+    var dirs = (r && r.roads || []).map(function (x) {
+      var w = x.width != null ? x.width.toFixed(1) : null;
+      if (x.dir && w) return t('roadLine.sideWidth', { dir: name('dir', x.dir), width: w });
+      return x.dir ? name('dir', x.dir) : w ? t('roadLine.metres', { width: w }) : '';
+    });
+    var kind = t(r && r.private === true ? 'roadLine.private' : r && r.private === false ? 'roadLine.public' : 'roadLine.unknown');
+    if (dirs.length) parts.push(t('roadLine.sides', { sides: dirs.join(t('roadLine.sep')), kind: kind }));
+    else if (r && r.width != null) parts.push(t('roadLine.width', { width: r.width.toFixed(1), kind: kind }));
+    else if (r && r.private != null) parts.push(t(r.private ? 'roadLine.privateAlone' : 'roadLine.publicAlone'));
+    if (r && r.frontage != null) parts.push(t('roadLine.frontage', { width: r.frontage.toFixed(1) }));
     return parts.join(' · ');
   }
-  var SHAPES = [['regular', 'Regular'], ['flag', 'Flag lot'], ['irregular', 'Irregular'], ['narrow', 'Narrow frontage'], ['corner', 'Corner'], ['tworoads', 'Two roads'], ['sloped', 'Sloped'], ['unknown', 'Shape unknown']];
-  var ZONES = [['low1', 'Low-rise residential'], ['low2', 'Low-rise residential II'], ['midhigh', 'Mid/high-rise residential'], ['rural', 'Rural residential'], ['residential', 'Residential'], ['neighbourhood_commercial', 'Neighbourhood commercial'], ['commercial', 'Commercial'], ['industrial', 'Industrial'], ['other', 'Other zoning']];
-  var SHAPE_NAME = {}, ZONE_NAME = {};
-  SHAPES.forEach(function (s) { SHAPE_NAME[s[0]] = s[1]; });
-  ZONES.forEach(function (z) { ZONE_NAME[z[0]] = z[1]; });
-  var HOME_TYPES = [['land', 'Vacant land'], ['oldhouse', 'Old house on lot'], ['renovated', 'Renovated'], ['newbuild', 'New build']];
-  var VIEWS = [['sea', 'Sea view'], ['mountain', 'Mountain view'], ['lake', 'Lake view'], ['river', 'River view'], ['forest', 'Forest view']];
-  var HOME_TYPE_NAME = {}, VIEW_NAME = {};
-  HOME_TYPES.forEach(function (t) { HOME_TYPE_NAME[t[0]] = t[1]; });
-  VIEWS.forEach(function (v) { VIEW_NAME[v[0]] = v[1]; });
+  // The codes of each multi-pick filter, in menu order; their names are strings under the prefix.
+  var SHAPES = ['regular', 'flag', 'irregular', 'narrow', 'corner', 'tworoads', 'sloped', 'unknown'];
+  var ZONES = ['low1', 'low2', 'midhigh', 'rural', 'residential', 'neighbourhood_commercial', 'commercial', 'industrial', 'other'];
+  var HOME_TYPES = ['land', 'oldhouse', 'renovated', 'newbuild'];
+  var VIEWS = ['sea', 'mountain', 'lake', 'river', 'forest'];
+  function airportName(ap) { return name('airport', ap.code) === ap.code ? ap.name : name('airport', ap.code); }
   function isHouse(it) { return it.type === 'renovated' || it.type === 'newbuild'; }
   function shapesOf(it) { return it.shape && it.shape.length ? it.shape : ['unknown']; }
   function fmtRatios(it) {
-    if (it.coverage != null && it.far != null) return it.coverage + '/' + it.far + '%';
-    if (it.far != null) return 'FAR ' + it.far + '%';
-    if (it.coverage != null) return 'Coverage ' + it.coverage + '%';
+    if (it.coverage != null && it.far != null) return t('ratio.both', { coverage: it.coverage, far: it.far });
+    if (it.far != null) return t('ratio.far', { far: it.far });
+    if (it.coverage != null) return t('ratio.coverage', { coverage: it.coverage });
     return '';
   }
   function isPlan(img) { return !!img && (img.plan === true || /間取/.test(img.caption || '')); }
@@ -219,7 +222,7 @@
       dayCount[it.firstSeen] = (dayCount[it.firstSeen] || 0) + 1;
       return !state.added || it.firstSeen === ADDED_DAY[state.added];
     });
-    addedOpts.forEach(function (o) { o.textContent = o.dataset.label + ' · ' + (dayCount[ADDED_DAY[o.value]] || 0); });
+    addedOpts.forEach(function (o, i) { o.textContent = t('added.option', { label: addedLabel(i), n: dayCount[ADDED_DAY[o.value]] || 0 }); });
     var key = SORT[state.sort];
     // Listings missing the sort value (e.g. fees not listed) always go last.
     out.sort(function (a, b) {
@@ -259,15 +262,15 @@
     var idx = Math.min(carouselIdx[it.id] || 0, n - 1);
     var img = it.images[idx];
     return '' +
-        '<div class="carousel' + (isPlan(img) ? ' is-plan' : '') + '" role="group" aria-roledescription="carousel" aria-label="Photos of ' + esc(titleOf(it)) + '">' +
+        '<div class="carousel' + (isPlan(img) ? ' is-plan' : '') + '" role="group" aria-roledescription="carousel" aria-label="' + esc(t('card.photosOf', { title: titleOf(it) })) + '">' +
           (img ? '<img src="' + esc(imgSrc(img)) + '" alt="' + esc(img.caption || '') + '" loading="lazy" decoding="async" referrerpolicy="no-referrer">' : '') +
           (n > 1 ?
-            '<button type="button" class="carousel-btn prev" data-dir="-1" aria-label="Previous photo">' + icon('prev') + '</button>' +
-            '<button type="button" class="carousel-btn next" data-dir="1" aria-label="Next photo">' + icon('next') + '</button>' : '') +
-          (isNew(it) ? '<span class="new-tag">New</span>' : '') +
+            '<button type="button" class="carousel-btn prev" data-dir="-1" aria-label="' + esc(t('card.prevPhoto')) + '">' + icon('prev') + '</button>' +
+            '<button type="button" class="carousel-btn next" data-dir="1" aria-label="' + esc(t('card.nextPhoto')) + '">' + icon('next') + '</button>' : '') +
+          (isNew(it) ? '<span class="new-tag">' + t('card.new') + '</span>' : '') +
           (n ? '<span class="carousel-count" aria-live="polite">' + (idx + 1) + ' / ' + n + '</span>' : '') +
-          '<button type="button" class="fav-btn' + (favs[it.id] ? ' is-fav' : '') + '" aria-pressed="' + (favs[it.id] ? 'true' : 'false') + '" aria-label="Favourite">' + icon('star') + '</button>' +
-          '<button type="button" class="link-btn" aria-label="Copy link to this listing">' + icon('link') + '</button>' +
+          '<button type="button" class="fav-btn' + (favs[it.id] ? ' is-fav' : '') + '" aria-pressed="' + (favs[it.id] ? 'true' : 'false') + '" aria-label="' + esc(t('card.favourite')) + '">' + icon('star') + '</button>' +
+          '<button type="button" class="link-btn" aria-label="' + esc(t('card.copyLink')) + '">' + icon('link') + '</button>' +
         '</div>';
   }
 
@@ -278,17 +281,17 @@
 
   function stationLi(st) {
     if (!st) return '';
-    return '<li class="wide">' + icon('train') + '<span><b>' + esc(st.station) + '</b>' + (st.stationEn ? ' <span class="en">' + esc(st.stationEn) + '</span>' : '') + ' · ' + st.walk + ' min walk</span></li>';
+    return '<li class="wide">' + icon('train') + '<span><b>' + esc(st.station) + '</b>' + (st.stationEn && showEn() ? ' <span class="en">' + esc(st.stationEn) + '</span>' : '') + ' · ' + t('card.minWalk', { n: st.walk }) + '</span></li>';
   }
   function gymLi(it) {
-    return it.gym ? '<li class="wide">' + icon('gym') + '<span>Anytime Fitness · <b>' + it.gym.walk + ' min</b> walk</span></li>' : '';
+    return it.gym ? '<li class="wide">' + icon('gym') + '<span>' + t('card.gym', { n: it.gym.walk }) + '</span></li>' : '';
   }
 
   function landCardHtml(it) {
     var road = fmtRoad(it.road);
-    var zone = it.zoningCat ? ZONE_NAME[it.zoningCat] : it.zoning;
+    var zone = it.zoningCat ? name('zoning', it.zoningCat) : it.zoning;
     var ratios = fmtRatios(it);
-    var flags = [[it.setback, 'Setback'], [it.buildCondition, "Seller's builder required"], [it.state === 'oldhouse', 'Old house on lot'], [it.leasehold, 'Leasehold']]
+    var flags = [[it.setback, t('flag.setback')], [it.buildCondition, t('flag.builder')], [it.state === 'oldhouse', t('flag.oldhouse')], [it.leasehold, t('flag.leasehold')]]
       .filter(function (f) { return f[0] === true; });
     return cardOpen(it) + carouselHtml(it) +
         '<div class="card-body">' +
@@ -298,14 +301,14 @@
           '</h2>' +
           '<div class="card-price"><strong>' + fmtPriceRange(it) + '</strong><span>' + fmtPerM2(it.pricePerM2Man) + ' · ' + fmtPerTsubo(it.pricePerTsuboMan) + '</span></div>' +
           '<ul class="tags">' +
-            shapesOf(it).map(function (t) { return '<li>' + esc(SHAPE_NAME[t] || t) + '</li>'; }).join('') +
+            shapesOf(it).map(function (s) { return '<li>' + esc(name('shape', s)) + '</li>'; }).join('') +
             flags.map(function (f) { return '<li class="flag">' + f[1] + '</li>'; }).join('') +
           '</ul>' +
           '<ul class="specs">' +
             '<li class="wide">' + icon('area') + '<span><b>' + fmtLotArea(it) + '</b></span></li>' +
-            '<li class="wide">' + icon('road') + '<span>' + (road ? '<b>' + esc(road) + '</b>' : '<span class="en">Road unknown</span>') + '</span></li>' +
-            '<li class="wide">' + icon('zone') + '<span>' + (zone ? '<b>' + esc(zone) + '</b>' : '<span class="en">Zoning unknown</span>') + (ratios ? ' · ' + ratios : '') + '</span></li>' +
-            (it.shinjuku ? '<li class="wide">' + icon('pin') + '<span>~<b>' + it.shinjuku.total + ' min</b> to Shinjuku</span></li>' : '') +
+            '<li class="wide">' + icon('road') + '<span>' + (road ? '<b>' + esc(road) + '</b>' : '<span class="en">' + t('card.roadUnknown') + '</span>') + '</span></li>' +
+            '<li class="wide">' + icon('zone') + '<span>' + (zone ? '<b>' + esc(zone) + '</b>' : '<span class="en">' + t('card.zoningUnknown') + '</span>') + (ratios ? ' · ' + ratios : '') + '</span></li>' +
+            (it.shinjuku ? '<li class="wide">' + icon('pin') + '<span>' + t('card.toShinjuku', { n: it.shinjuku.total }) + '</span></li>' : '') +
             stationLi(it.nearest) +
             gymLi(it) +
           '</ul>' +
@@ -319,7 +322,7 @@
     var parts = [];
     if (it.floorArea != null) parts.push('<b>' + fmtArea(it.floorArea) + '</b>');
     if (it.layout && it.layout !== '-') parts.push(esc(it.layout));
-    if (it.built) parts.push('Built <b>' + esc(it.built.slice(0, 4)) + '</b>');
+    if (it.built) parts.push(t('card.built', { year: esc(it.built.slice(0, 4)) }));
     return parts.length ? '<li class="wide">' + icon('house') + '<span>' + parts.join(' · ') + '</span></li>' : '';
   }
 
@@ -334,13 +337,13 @@
           '<div class="card-price"><strong>' + fmtPrice(it.priceMan) + '</strong>' +
             (isHouse(it) ? '' : '<span>' + fmtPerM2(it.pricePerM2Man) + ' · ' + fmtPerTsubo(it.pricePerTsuboMan) + '</span>') + '</div>' +
           '<ul class="tags">' +
-            '<li>' + esc(HOME_TYPE_NAME[it.type] || it.type) + '</li>' +
-            it.views.map(function (v) { return '<li class="view">' + esc(VIEW_NAME[v] || v) + '</li>'; }).join('') +
+            '<li>' + esc(name('homeType', it.type)) + '</li>' +
+            it.views.map(function (v) { return '<li class="view">' + esc(name('viewType', v)) + '</li>'; }).join('') +
           '</ul>' +
           '<ul class="specs">' +
             '<li class="wide">' + icon('area') + '<span><b>' + fmtLotArea(it) + '</b></span></li>' +
             houseLi(it) +
-            '<li class="wide">' + icon('plane') + '<span><b>' + esc(ap.name) + '</b> · ' + ap.minutes + ' min drive</span></li>' +
+            '<li class="wide">' + icon('plane') + '<span><b>' + esc(airportName(ap)) + '</b> · ' + t('card.drive', { n: ap.minutes }) + '</span></li>' +
             stationLi(it.nearest) +
             gymLi(it) +
             (it.viewNote ? '<li class="wide">' + icon('compass') + '<span>' + esc(it.viewNote) + '</span></li>' : '') +
@@ -360,17 +363,17 @@
         '<div class="card-body">' +
           '<h2 class="card-title">' +
             '<a href="' + esc(it.url) + '" target="_blank" rel="noopener noreferrer">' + esc(it.name) + '</a>' +
-            (it.nameEn ? '<span class="en">' + esc(it.nameEn) + '</span>' : '') +
+            (it.nameEn && showEn() ? '<span class="en">' + esc(it.nameEn) + '</span>' : '') +
           '</h2>' +
           '<div class="card-price"><strong>' + fmtPrice(it.priceMan) + '</strong><span>' + fmtPerM2(it.pricePerM2Man) + '</span></div>' +
           '<ul class="specs">' +
             '<li>' + icon('area') + '<span><b>' + fmtArea(it.area) + '</b> · ' + esc(it.layout) + '</span></li>' +
             '<li>' + icon('floor') + '<span><b>' + esc(fmtFloor(it)) + '</b></span></li>' +
-            '<li>' + icon('compass') + '<span>' + (facing ? 'Faces <b>' + facing + '</b>' : '<span class="en">Facing unknown</span>') + '</span></li>' +
+            '<li>' + icon('compass') + '<span>' + (facing ? t('card.faces', { dir: name('dir', facing) }) : '<span class="en">' + t('card.facingUnknown') + '</span>') + '</span></li>' +
             '<li>' + icon('yen') + '<span><b>' + fmtFees(it.feesTotal) + '</b></span></li>' +
-            '<li>' + icon('calendar') + '<span>Built <b>' + esc((it.built || '').slice(0, 4)) + '</b></span></li>' +
+            '<li>' + icon('calendar') + '<span>' + t('card.built', { year: esc((it.built || '').slice(0, 4)) }) + '</span></li>' +
             '<li>' + icon('lift') + '<span>' + fmtLift(it) + '</span></li>' +
-            '<li>' + icon('pin') + '<span>~<b>' + it.shinjuku.total + ' min</b> to Shinjuku</span></li>' +
+            '<li>' + icon('pin') + '<span>' + t('card.toShinjuku', { n: it.shinjuku.total }) + '</span></li>' +
             stationLi(st) +
             gymLi(it) +
           '</ul>' +
@@ -380,7 +383,7 @@
 
   function renderList() {
     if (!filtered.length) {
-      listEl.innerHTML = '<p class="empty">No listings match these filters.</p>';
+      listEl.innerHTML = '<p class="empty">' + t('list.empty') + '</p>';
       return;
     }
     listEl.innerHTML = '<div class="cards">' + filtered.map(cardHtml).join('') + '</div>';
@@ -388,15 +391,13 @@
 
   function renderCount() {
     var n = filtered.length, total = ITEMS.length;
-    countEl.innerHTML = n === total
-      ? '<strong>' + total + '</strong> listings'
-      : '<strong>' + n + '</strong> of ' + total + ' listings';
-    doneBtn.textContent = 'Show ' + n + (n === 1 ? ' listing' : ' listings');
+    countEl.innerHTML = n === total ? t('count.all', { n: total }) : t('count.some', { n: n, total: total });
+    doneBtn.textContent = t('sheet.show', { n: n });
     var k = M.sel.filter(function (s) { return state[s]; }).length +
       M.num.filter(function (s) { return state[s] != null; }).length +
       M.multi.filter(function (s) { return state[s].length; }).length;
     filtersBtn.innerHTML = icon('menu') + (k ? '<span class="badge">' + k + '</span>' : '');
-    filtersBtn.setAttribute('aria-label', 'Filters' + (k ? ', ' + k + ' active' : ''));
+    filtersBtn.setAttribute('aria-label', k ? t('filters.buttonActive', { n: k }) : t('filters.button'));
     resetBtn.hidden = !k && !state.q;
   }
 
@@ -498,7 +499,13 @@
     if (pts.length) map.fitBounds(L.latLngBounds(pts.map(function (it) { return [it.lat, it.lng]; })), { padding: [32, 32], animate: false });
   }
   fitMode();
-  L.control.zoom({ position: 'topright' }).addTo(map);
+  // Leaflet's zoom buttons and MapLibre's canvas carry their own English labels; they take ours.
+  var zoomCtl = null, glLayer = null;
+  function addZoom() {
+    if (zoomCtl) zoomCtl.remove();
+    zoomCtl = L.control.zoom({ position: 'topright', zoomInTitle: t('map.zoomIn'), zoomOutTitle: t('map.zoomOut') }).addTo(map);
+  }
+  addZoom();
   // Basemap: OpenFreeMap's minimal Positron vector style (free, no key), adjusted so
   // detail appears only once it's useful, like Google Maps: buildings from zoom 16,
   // small streets from 13, street names from 16. Shopping/commercial areas get a soft
@@ -539,7 +546,7 @@
       filter: ['match', ['get', 'class'], ['commercial', 'retail'], true, false],
       paint: { 'fill-color': '#f6e6b4', 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 12, 0, 13, 0.7] }
     });
-    L.maplibreGL({ style: style, attribution: ATTR, interactive: false }).addTo(map);
+    glLayer = L.maplibreGL({ style: style, attribution: ATTR, interactive: false, locale: { 'Map.Title': t('layout.map') } }).addTo(map);
   });
 
   // Stations: one canvas for every dot, below the listing pins. Names are DOM
@@ -581,7 +588,7 @@
     var boxes = [];
     labelSets[z] = window.STATIONS.filter(function (s) {
       var p = map.project([s.lat, s.lng], z);
-      var box = { l: p.x + 6, t: p.y - 11, r: p.x + 20 + s.name.length * 13.5 + (s.en || '').length * 6.6, b: p.y + 11 };
+      var box = { l: p.x + 6, t: p.y - 11, r: p.x + 20 + s.name.length * 13.5 + (showEn() && s.en || '').length * 6.6, b: p.y + 11 };
       var free = boxes.every(function (o) { return box.l > o.r || box.r < o.l || box.t > o.b || box.b < o.t; });
       if (free) boxes.push(box);
       return free;
@@ -602,7 +609,7 @@
       if (!view.contains([s.lat, s.lng]) || s.lat + ',' + s.lng === badgedStation) return;
       L.marker([s.lat, s.lng], {
         pane: 'stations', interactive: false, keyboard: false,
-        icon: L.divIcon({ className: 'station-label', html: '<span>' + esc(s.name) + (s.en ? ' <i>' + esc(s.en) + '</i>' : '') + '</span>', iconSize: null })
+        icon: L.divIcon({ className: 'station-label', html: '<span>' + esc(s.name) + (s.en && showEn() ? ' <i>' + esc(s.en) + '</i>' : '') + '</span>', iconSize: null })
       }).addTo(stationLabels);
     });
   }
@@ -628,7 +635,7 @@
 
   // Price chip on the map; favourites carry a star inside the chip.
   function pinIcon(it) {
-    return L.divIcon({ className: 'pin' + (favs[it.id] ? ' is-fav' : '') + (isNew(it) ? ' is-new' : ''), html: '<span>' + (favs[it.id] ? '<b class="pin-star">★</b>' : '') + (isNew(it) ? '<b class="pin-new">New</b>' : '') + fmtPrice(it.priceMan) + '</span>', iconSize: null });
+    return L.divIcon({ className: 'pin' + (favs[it.id] ? ' is-fav' : '') + (isNew(it) ? ' is-new' : ''), html: '<span>' + (favs[it.id] ? '<b class="pin-star">★</b>' : '') + (isNew(it) ? '<b class="pin-new">' + t('map.new') + '</b>' : '') + fmt().pin(it.priceMan) + '</span>', iconSize: null });
   }
 
   Object.keys(MODES).forEach(function (k) {
@@ -737,14 +744,14 @@
     var st = it.nearest;
     var facts;
     if (it.kind === 'home') {
-      facts = [HOME_TYPE_NAME[it.type] || it.type, fmtLotArea(it), esc(it.airport.name) + ' ' + it.airport.minutes + ' min drive'];
-      if (it.views.length) facts.push(VIEW_NAME[it.views[0]] || it.views[0]);
+      facts = [esc(name('homeType', it.type)), fmtLotArea(it), t('mini.airport', { airport: esc(airportName(it.airport)), n: it.airport.minutes })];
+      if (it.views.length) facts.push(esc(name('viewType', it.views[0])));
     } else {
       facts = it.kind === 'land'
-        ? [fmtLotArea(it)].concat(shapesOf(it).filter(function (t) { return t !== 'unknown'; }).map(function (t) { return SHAPE_NAME[t] || t; }))
+        ? [fmtLotArea(it)].concat(shapesOf(it).filter(function (s) { return s !== 'unknown'; }).map(function (s) { return esc(name('shape', s)); }))
         : [fmtArea(it.area) + ' · ' + esc(it.layout || ''), fmtFloor(it)];
-      if (st) facts.push(esc(st.station) + ' ' + st.walk + ' min');
-      if (it.shinjuku) facts.push('Shinjuku ~' + it.shinjuku.total + ' min');
+      if (st) facts.push(t('mini.station', { station: esc(st.station), n: st.walk }));
+      if (it.shinjuku) facts.push(t('mini.shinjuku', { n: it.shinjuku.total }));
     }
     return cardOpen(it).replace('class="card', 'class="card card-mini') + carouselHtml(it) +
       '<div class="card-body">' +
@@ -760,7 +767,7 @@
     var id = phone.matches && activeIds.length === 1 && cluster.hasLayer(markers[activeIds[0]]) ? activeIds[0] : '';
     if (!id) { sheetEl.hidden = true; sheetEl.dataset.id = ''; return; }
     if (sheetEl.dataset.id !== id) {
-      sheetEl.innerHTML = '<button type="button" class="sheet-x" aria-label="Close">' + icon('close') + '</button>' + miniCardHtml(BY_ID[id]);
+      sheetEl.innerHTML = '<button type="button" class="sheet-x" aria-label="' + esc(t('mini.close')) + '">' + icon('close') + '</button>' + miniCardHtml(BY_ID[id]);
       sheetEl.dataset.id = id;
     }
     sheetEl.hidden = false;
@@ -827,10 +834,10 @@
     var home = [it.lat, it.lng];
     var st = it.nearest, gym = it.gym, sm = it.supermarket, ap = it.airport;
     return [home].concat([
-      st && st.lat != null && ['station', 'train', st, st.station + (st.en ? ' ' + st.en : ''), st.walk + ' min'],
-      gym && ['gym', 'gym', gym, gym.name, gym.walk + ' min · ' + gym.meters + ' m'],
-      sm && ['market', 'cart', sm, sm.name, sm.walk + ' min · ' + sm.meters + ' m'],
-      ap && ['airport', 'plane', ap, ap.name, ap.minutes + ' min drive']
+      st && st.lat != null && ['station', 'train', st, st.station + (st.en && showEn() ? ' ' + st.en : ''), t('map.walk', { n: st.walk })],
+      gym && ['gym', 'gym', gym, gym.name, t('map.walkMetres', { n: gym.walk, m: gym.meters })],
+      sm && ['market', 'cart', sm, sm.name, t('map.walkMetres', { n: sm.walk, m: sm.meters })],
+      ap && ['airport', 'plane', ap, airportName(ap), t('map.drive', { n: ap.minutes })]
     ].filter(Boolean).map(function (o) {
       var kind = o[0], to = [o[2].lat, o[2].lng];
       L.polyline([home, to], { className: 'walk-line is-' + kind, interactive: false }).addTo(overlays);
@@ -963,15 +970,21 @@
 
   // Shape, zoning, home type and view: a dropdown of checkboxes. Nothing ticked means any.
   var MULTI_OPTS = { shape: SHAPES, zoning: ZONES, type: HOME_TYPES, view: VIEWS };
+  var MULTI_PREFIX = { shape: 'shape', zoning: 'zoning', type: 'homeType', view: 'viewType' };
   function renderMultiLabel(k) {
-    var el = document.getElementById(k), v = state[k], names = MULTI_OPTS[k].filter(function (o) { return v.indexOf(o[0]) !== -1; });
-    el.querySelector('summary').textContent = !names.length ? el.dataset.any : names[0][1] + (names.length > 1 ? ' +' + (names.length - 1) : '');
+    var el = document.getElementById(k), v = state[k], picked = MULTI_OPTS[k].filter(function (c) { return v.indexOf(c) !== -1; });
+    el.querySelector('summary').textContent = !picked.length ? t(MULTI_PREFIX[k] + '.any')
+      : picked.length > 1 ? t('filters.more', { first: name(MULTI_PREFIX[k], picked[0]), n: picked.length - 1 }) : name(MULTI_PREFIX[k], picked[0]);
+  }
+  // The checkbox labels; ticks are put back by syncControls.
+  function renderMultiPanel(k) {
+    document.getElementById(k).querySelector('.multi-panel').innerHTML = MULTI_OPTS[k].map(function (c) {
+      return '<label><input type="checkbox" value="' + c + '"> ' + esc(name(MULTI_PREFIX[k], c)) + '</label>';
+    }).join('');
   }
   Object.keys(MULTI_OPTS).forEach(function (k) {
     var el = document.getElementById(k);
-    el.querySelector('.multi-panel').innerHTML = MULTI_OPTS[k].map(function (o) {
-      return '<label><input type="checkbox" value="' + o[0] + '"> ' + esc(o[1]) + '</label>';
-    }).join('');
+    renderMultiPanel(k);
     el.addEventListener('change', function () {
       state[k] = [].slice.call(el.querySelectorAll('input:checked')).map(function (c) { return c.value; });
       renderMultiLabel(k);
@@ -1007,7 +1020,7 @@
   var dirBtn = document.getElementById('dir');
   function renderDir() {
     var asc = state.dir === 1;
-    dirBtn.setAttribute('aria-label', asc ? 'Ascending, switch to descending' : 'Descending, switch to ascending');
+    dirBtn.setAttribute('aria-label', t(asc ? 'sort.ascAria' : 'sort.descAria'));
     dirBtn.querySelector('use').setAttribute('href', asc ? '#i-asc' : '#i-desc');
   }
   dirBtn.addEventListener('click', function () {
@@ -1061,7 +1074,7 @@
     var f = { q: state.q, sort: state.sort, dir: state.dir };
     M.sel.forEach(function (k) { f[k] = state[k]; });
     M.num.forEach(function (k) { f[k] = state[k]; });
-    M.multi.forEach(function (k) { f[k] = MULTI_OPTS[k].map(function (o) { return o[0]; }).filter(function (v) { return state[k].indexOf(v) !== -1; }); });
+    M.multi.forEach(function (k) { f[k] = MULTI_OPTS[k].filter(function (v) { return state[k].indexOf(v) !== -1; }); });
     return f;
   }
   function applySaved(f) {
@@ -1086,7 +1099,7 @@
 
   function renderPresets(selected) {
     var p = loadPresets();
-    presetSel.innerHTML = '<option value="">Saved filters</option>' + Object.keys(p).sort().map(function (n) {
+    presetSel.innerHTML = '<option value="">' + esc(t('presets.none')) + '</option>' + Object.keys(p).sort().map(function (n) {
       return '<option value="' + esc(n) + '"' + (n === selected ? ' selected' : '') + '>' + esc(n) + '</option>';
     }).join('');
     syncPresetButtons();
@@ -1097,7 +1110,7 @@
     syncPresetButtons();
   });
   document.getElementById('preset-save').addEventListener('click', function () {
-    var name = (window.prompt('Name for these filters', '') || '').trim();
+    var name = (window.prompt(t('presets.namePrompt'), '') || '').trim();
     if (!name) return;
     var p = loadPresets(); p[name] = currentFilters(); storePresets(p);
     renderPresets(name);
@@ -1108,7 +1121,7 @@
   });
   presetDel.addEventListener('click', function () {
     var name = presetSel.value;
-    if (!name || !window.confirm('Delete saved filters "' + name + '"?')) return;
+    if (!name || !window.confirm(t('presets.deleteConfirm', { name: name }))) return;
     var p = loadPresets(); delete p[name]; storePresets(p);
     renderPresets('');
   });
@@ -1122,7 +1135,7 @@
     mode = m; M = MODES[m];
     ITEMS = M.items; BY_ID = M.byId; markers = M.markers;
     document.body.dataset.mode = m;
-    document.title = M.label;
+    document.title = t('mode.' + m);
     modeEl.value = m;
     [].forEach.call(sortEl.options, function (o) { o.hidden = o.disabled = !inMode(o); });
     state = freshState();
@@ -1149,7 +1162,7 @@
   function showMap(on) {
     document.body.classList.toggle('is-map', on);
     viewBtn.innerHTML = icon(on ? 'list' : 'map');
-    viewBtn.setAttribute('aria-label', on ? 'Show list' : 'Show map');
+    viewBtn.setAttribute('aria-label', t(on ? 'toggle.showList' : 'toggle.showMap'));
     if (on) map.invalidateSize();
   }
   viewBtn.addEventListener('click', function () { showMap(!document.body.classList.contains('is-map')); });
@@ -1171,6 +1184,39 @@
   filtersBtn.addEventListener('click', function () { openFilters(true); });
   document.getElementById('filters-close').addEventListener('click', function () { openFilters(false); });
   doneBtn.addEventListener('click', function () { openFilters(false); });
+
+  // Language -------------------------------------------------------------
+
+  // The picked language is kept in this browser (i18n.js) and never goes in the link,
+  // so a shared view means the same in every language.
+  var langEl = document.getElementById('lang');
+  var shareLabel = document.querySelector('#share span');
+  function relabel() {
+    window.I18N.apply();
+    langEl.value = window.I18N.lang();
+    shareLabel.dataset.copied = t('share.copied');
+    Object.keys(MULTI_OPTS).forEach(renderMultiPanel);
+    labelSets = {};
+  }
+  langEl.addEventListener('change', function () {
+    window.I18N.setLang(langEl.value);
+    relabel();
+    document.title = t('mode.' + mode);
+    syncControls();
+    renderPresets(presetSel.value);
+    showMap(document.body.classList.contains('is-map'));
+    Object.keys(MODES).forEach(function (k) {
+      MODES[k].items.forEach(function (it) { MODES[k].markers[it.id].setIcon(pinIcon(it)); });
+    });
+    applyMarkerStates();
+    addZoom();
+    if (glLayer) glLayer.getMaplibreMap().getCanvas().setAttribute('aria-label', t('layout.map'));
+    renderStations();
+    sheetEl.dataset.id = '';
+    applyFilters();
+    renderOverlays();
+  });
+  relabel();
 
   // Boot -----------------------------------------------------------------
 

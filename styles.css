@@ -703,7 +703,7 @@ select.brand {
 .share-btn .icon { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
 .share-btn:hover { color: var(--ink); border-color: var(--line-2); }
 .share-btn.is-copied { background: var(--accent); border-color: var(--accent); color: #fff; }
-.share-btn.is-copied span::after { content: ' · copied'; }
+.share-btn.is-copied span::after { content: ' · ' attr(data-copied); }
 
 /* Phone ------------------------------------------------------------------ */
 
@@ -739,7 +739,7 @@ select.brand {
     border-radius: 9px; background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center;
   }
   /* The flats/land switch heads the menu. */
-  .filters > .brand { order: -2; flex: 1 1 100%; font-size: 18px; height: 42px; }
+  .filters > .brand { order: -3; flex: 1 1 100%; font-size: 18px; height: 42px; }
 
   /* Filters sheet: every control on its own full-width row. */
   .filters { display: none; }
@@ -762,7 +762,9 @@ select.brand {
   .filters > .count,
   .filters > .share-btn,
   .filters > .reset-btn,
-  .filters > .sheet-close { flex: none; order: -1; }
+  .filters > .sheet-close { flex: none; order: -2; }
+  /* Language is the first control, under the count line. */
+  .filters > .field-lang { order: -1; }
   .filters .reset-btn { height: 42px; font-size: 15px; }
   .filters > .count { flex: 1 1 auto; margin: 0; font-size: 15px; }
   .filters > .bar-break { display: none; }
