@@ -483,6 +483,13 @@
   // Map ------------------------------------------------------------------
 
   var map = L.map('map', { zoomControl: false, maxZoom: 18, zoomSnap: 1, worldCopyJump: false });
+  // A fingertip moves a few pixels during a tap. Leaflet starts dragging the map after 3 px
+  // and cancels the touch, and iPad Safari then sends no click: the pin showed its hover
+  // but nothing was selected (Vin, 2026-10-21). A finger gets Leaflet's tap tolerance
+  // (15 px) before it drags the map; a mouse keeps 3 px.
+  map.getContainer().addEventListener('pointerdown', function (e) {
+    map.dragging._draggable.options.clickTolerance = e.pointerType === 'mouse' ? 3 : map.options.tapTolerance;
+  }, true);
   // Open on central Tokyo; the few outlying listings (Hachioji etc.) are a pan away.
   // Ideal home spans all of Japan, so it opens fitted to every home listing instead.
   var CENTRAL = (mode !== 'home' && ITEMS.length ? ITEMS : MODES.flats.items).filter(function (it) { return it.lat > 35.55 && it.lat < 35.82 && it.lng > 139.58 && it.lng < 139.92; });
@@ -870,29 +877,35 @@
   var app = document.getElementById('app');
   var divider = document.getElementById('divider');
   var MIN = 360;
-  var raf = 0;
 
+  function clampLeft(px) { return Math.max(MIN, Math.min(window.innerWidth - MIN, px)); }
   function setLeft(px) {
-    var max = window.innerWidth - MIN;
-    px = Math.max(MIN, Math.min(max, px));
+    px = clampLeft(px);
     app.style.setProperty('--left', px + 'px');
     divider.setAttribute('aria-valuenow', Math.round(px / window.innerWidth * 100));
-    if (!raf) raf = requestAnimationFrame(function () { raf = 0; map.invalidateSize(false); });
+    map.invalidateSize();
   }
 
+  // While dragging only the divider moves; the list and map take the new split once, on
+  // release. Relaying them out on every move was slow on an iPad (Vin, 2026-10-21).
+  var dragStart = 0, dragTo = null;
   divider.addEventListener('pointerdown', function (e) {
     e.preventDefault();
     divider.setPointerCapture(e.pointerId);
     document.body.classList.add('is-resizing');
+    dragStart = divider.getBoundingClientRect().left;
+    dragTo = null;
   });
   divider.addEventListener('pointermove', function (e) {
     if (!document.body.classList.contains('is-resizing')) return;
-    setLeft(e.clientX);
+    dragTo = clampLeft(e.clientX);
+    divider.style.transform = 'translateX(' + (dragTo - dragStart) + 'px)';
   });
   function endDrag() {
     if (!document.body.classList.contains('is-resizing')) return;
     document.body.classList.remove('is-resizing');
-    map.invalidateSize();
+    divider.style.transform = '';
+    if (dragTo != null) setLeft(dragTo);
   }
   divider.addEventListener('pointerup', endDrag);
   divider.addEventListener('pointercancel', endDrag);
@@ -902,7 +915,6 @@
     else if (e.key === 'ArrowRight') setLeft(cur + 32);
     else return;
     e.preventDefault();
-    map.invalidateSize();
   });
 
   // Controls -------------------------------------------------------------
@@ -912,12 +924,26 @@
     return isFinite(n) ? n : null;
   }
 
+  // A typed filter (the search and every number field) applies 2 s after the last
+  // keystroke, or at once when the field is left or Enter is pressed. Filtering on
+  // every keystroke was laggy on an iPad (Vin, 2026-10-21).
+  function typedFilter(el, set) {
+    var timer = 0;
+    function commit() {
+      if (!timer) return;
+      clearTimeout(timer); timer = 0;
+      set(el.value);
+      applyFilters();
+    }
+    el.addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(commit, 2000); });
+    // On leaving, apply once the tap that left the field has landed: applying can reflow the
+    // phone sheet's top row (Reset shows or hides), which would move × out from under the finger.
+    el.addEventListener('blur', function () { setTimeout(commit, 0); });
+    el.addEventListener('keydown', function (e) { if (e.key === 'Enter') commit(); });
+  }
+
   var qEl = document.getElementById('q');
-  var qTimer = 0;
-  qEl.addEventListener('input', function () {
-    clearTimeout(qTimer);
-    qTimer = setTimeout(function () { state.q = qEl.value; applyFilters(); }, 120);
-  });
+  typedFilter(qEl, function (v) { state.q = v; });
 
   // Every control of every mode, once each.
   function allKeys(kind) {
@@ -925,10 +951,7 @@
       .filter(function (k, i, all) { return all.indexOf(k) === i; });
   }
   allKeys('num').forEach(function (k) {
-    document.getElementById(k).addEventListener('input', function (e) {
-      state[k] = num(e.target.value);
-      applyFilters();
-    });
+    typedFilter(document.getElementById(k), function (v) { state[k] = num(v); });
   });
 
   allKeys('sel').forEach(function (k) {

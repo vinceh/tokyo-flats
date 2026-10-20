@@ -202,6 +202,8 @@ body.is-resizing * { cursor: col-resize !important; user-select: none; }
 body.is-resizing .divider::after,
 .divider:focus-visible::after { background: var(--accent); height: 56px; }
 .divider:focus-visible { outline-offset: -2px; }
+/* While dragging, the divider moves alone over the list and map; the split follows on release. */
+body.is-resizing .divider { z-index: 1; }
 
 /* Listings --------------------------------------------------------------- */
 
