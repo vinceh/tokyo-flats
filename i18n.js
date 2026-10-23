@@ -197,6 +197,7 @@
       'card.prevPhoto': 'Previous photo',
       'card.nextPhoto': 'Next photo',
       'card.new': 'New',
+      'card.updated': 'Updated',
       'card.favourite': 'Favourite',
       'card.copyLink': 'Copy link to this listing',
       'card.minWalk': '{n} min walk',
@@ -257,7 +258,8 @@
       'map.drive': '{n} min drive',
       'map.zoomIn': 'Zoom in',
       'map.zoomOut': 'Zoom out',
-      'map.new': 'New'
+      'map.new': 'New',
+      'map.updated': 'Upd'
     },
     ja: {
       'mode.aria': '表示する物件',
@@ -450,6 +452,7 @@
       'card.prevPhoto': '前の写真',
       'card.nextPhoto': '次の写真',
       'card.new': '新着',
+      'card.updated': '価格変更',
       'card.favourite': 'お気に入り',
       'card.copyLink': 'この物件のリンクをコピー',
       'card.minWalk': '徒歩{n}分',
@@ -510,7 +513,8 @@
       'map.drive': '車で{n}分',
       'map.zoomIn': 'ズームイン',
       'map.zoomOut': 'ズームアウト',
-      'map.new': '新着'
+      'map.new': '新着',
+      'map.updated': '変更'
     },
     'zh-Hant': {
       'mode.aria': '顯示',
@@ -703,6 +707,7 @@
       'card.prevPhoto': '上一張照片',
       'card.nextPhoto': '下一張照片',
       'card.new': '新上架',
+      'card.updated': '調價',
       'card.favourite': '收藏',
       'card.copyLink': '複製此物件的連結',
       'card.minWalk': '步行{n}分鐘',
@@ -763,7 +768,8 @@
       'map.drive': '車程{n}分鐘',
       'map.zoomIn': '放大',
       'map.zoomOut': '縮小',
-      'map.new': '新'
+      'map.new': '新',
+      'map.updated': '調價'
     },
     'zh-Hans': {
       'mode.aria': '显示',
@@ -956,6 +962,7 @@
       'card.prevPhoto': '上一张',
       'card.nextPhoto': '下一张',
       'card.new': '新',
+      'card.updated': '调价',
       'card.favourite': '收藏',
       'card.copyLink': '复制此房源的链接',
       'card.minWalk': '步行{n}分钟',
@@ -1016,7 +1023,8 @@
       'map.drive': '车程{n}分钟',
       'map.zoomIn': '放大',
       'map.zoomOut': '缩小',
-      'map.new': '新'
+      'map.new': '新',
+      'map.updated': '调价'
     }
   };
 

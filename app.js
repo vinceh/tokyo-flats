@@ -34,6 +34,8 @@
   function dayStr(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
   var TODAY = dayStr(now);
   function isNew(it) { return it.firstSeen === TODAY; }
+  // Updated = price changed today; the refresh stamps priceChanged. A listing new today shows only New.
+  function isUpdated(it) { return it.priceChanged === TODAY && !isNew(it); }
   // The "Listed" picker offers each of the last 5 days (Vin, 2026-10-14). Values are relative
   // ('today', 'd1'..'d4' days ago), so a saved filter or shared link keeps meaning "yesterday".
   var ADDED_DAY = {};
@@ -218,9 +220,11 @@
       if (state.mmax != null && !(it.supermarket && it.supermarket.walk <= state.mmax)) return false;
       if (state.fav === 'only' && !favs[it.id]) return false;
       if (!MODE_MATCH[mode](it)) return false;
-      // Each day's count is of listings that pass every other filter.
+      // Each day's count is of listings that pass every other filter: that day's new listings
+      // plus that day's price changes.
       dayCount[it.firstSeen] = (dayCount[it.firstSeen] || 0) + 1;
-      return !state.added || it.firstSeen === ADDED_DAY[state.added];
+      if (it.priceChanged && it.priceChanged !== it.firstSeen) dayCount[it.priceChanged] = (dayCount[it.priceChanged] || 0) + 1;
+      return !state.added || it.firstSeen === ADDED_DAY[state.added] || it.priceChanged === ADDED_DAY[state.added];
     });
     addedOpts.forEach(function (o, i) { o.textContent = t('added.option', { label: addedLabel(i), n: dayCount[ADDED_DAY[o.value]] || 0 }); });
     var key = SORT[state.sort];
@@ -267,7 +271,7 @@
           (n > 1 ?
             '<button type="button" class="carousel-btn prev" data-dir="-1" aria-label="' + esc(t('card.prevPhoto')) + '">' + icon('prev') + '</button>' +
             '<button type="button" class="carousel-btn next" data-dir="1" aria-label="' + esc(t('card.nextPhoto')) + '">' + icon('next') + '</button>' : '') +
-          (isNew(it) ? '<span class="new-tag">' + t('card.new') + '</span>' : '') +
+          (isNew(it) ? '<span class="new-tag">' + t('card.new') + '</span>' : isUpdated(it) ? '<span class="updated-tag">' + t('card.updated') + '</span>' : '') +
           (n ? '<span class="carousel-count" aria-live="polite">' + (idx + 1) + ' / ' + n + '</span>' : '') +
           '<button type="button" class="fav-btn' + (favs[it.id] ? ' is-fav' : '') + '" aria-pressed="' + (favs[it.id] ? 'true' : 'false') + '" aria-label="' + esc(t('card.favourite')) + '">' + icon('star') + '</button>' +
           '<button type="button" class="link-btn" aria-label="' + esc(t('card.copyLink')) + '">' + icon('link') + '</button>' +
@@ -635,7 +639,7 @@
 
   // Price chip on the map; favourites carry a star inside the chip.
   function pinIcon(it) {
-    return L.divIcon({ className: 'pin' + (favs[it.id] ? ' is-fav' : '') + (isNew(it) ? ' is-new' : ''), html: '<span>' + (favs[it.id] ? '<b class="pin-star">★</b>' : '') + (isNew(it) ? '<b class="pin-new">' + t('map.new') + '</b>' : '') + fmt().pin(it.priceMan) + '</span>', iconSize: null });
+    return L.divIcon({ className: 'pin' + (favs[it.id] ? ' is-fav' : '') + (isNew(it) ? ' is-new' : isUpdated(it) ? ' is-updated' : ''), html: '<span>' + (favs[it.id] ? '<b class="pin-star">★</b>' : '') + (isNew(it) ? '<b class="pin-new">' + t('map.new') + '</b>' : isUpdated(it) ? '<b class="pin-updated">' + t('map.updated') + '</b>' : '') + fmt().pin(it.priceMan) + '</span>', iconSize: null });
   }
 
   Object.keys(MODES).forEach(function (k) {
