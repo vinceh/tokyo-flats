@@ -88,6 +88,14 @@
     return it.priceMaxMan > it.priceMan ? fmt().priceRange(it.priceMan, it.priceMaxMan) : fmtPrice(it.priceMan);
   }
   function fmtPerTsubo(man) { return fmt().perTsubo(man); }
+  // A card whose price ever changed carries priceHistory; its price opens the list (Vin, 2026-10-24).
+  function priceHtml(it, text) {
+    return it.priceHistory ? '<button type="button" class="price-btn" aria-expanded="false" aria-controls="price-pop">' + text + '</button>' : text;
+  }
+  // While the card shows Updated, the price before the change, struck through.
+  function oldPriceHtml(it, cls, f) {
+    return isUpdated(it) ? '<s class="' + cls + '">' + f(it.prevPriceMan) + '</s>' : '';
+  }
   function num1(a) { return Number.isInteger(a) ? a : a.toFixed(1); }
   function fmtLotArea(it) {
     var r = it.areaMax > it.area;
@@ -303,7 +311,7 @@
             '<a href="' + esc(it.url) + '" target="_blank" rel="noopener noreferrer">' + esc(titleOf(it)) + '</a>' +
             (it.name ? '<span class="en">' + esc(it.address) + '</span>' : '') +
           '</h2>' +
-          '<div class="card-price"><strong>' + fmtPriceRange(it) + '</strong><span>' + fmtPerM2(it.pricePerM2Man) + ' · ' + fmtPerTsubo(it.pricePerTsuboMan) + '</span></div>' +
+          '<div class="card-price"><strong>' + priceHtml(it, fmtPriceRange(it)) + '</strong>' + oldPriceHtml(it, 'old-price', fmtPrice) + '<span>' + fmtPerM2(it.pricePerM2Man) + ' · ' + fmtPerTsubo(it.pricePerTsuboMan) + '</span></div>' +
           '<ul class="tags">' +
             shapesOf(it).map(function (s) { return '<li>' + esc(name('shape', s)) + '</li>'; }).join('') +
             flags.map(function (f) { return '<li class="flag">' + f[1] + '</li>'; }).join('') +
@@ -338,7 +346,7 @@
             '<a href="' + esc(it.url) + '" target="_blank" rel="noopener noreferrer">' + esc(titleOf(it)) + '</a>' +
             (it.name ? '<span class="en">' + esc(it.address) + '</span>' : '') +
           '</h2>' +
-          '<div class="card-price"><strong>' + fmtPrice(it.priceMan) + '</strong>' +
+          '<div class="card-price"><strong>' + priceHtml(it, fmtPrice(it.priceMan)) + '</strong>' + oldPriceHtml(it, 'old-price', fmtPrice) +
             (isHouse(it) ? '' : '<span>' + fmtPerM2(it.pricePerM2Man) + ' · ' + fmtPerTsubo(it.pricePerTsuboMan) + '</span>') + '</div>' +
           '<ul class="tags">' +
             '<li>' + esc(name('homeType', it.type)) + '</li>' +
@@ -369,7 +377,7 @@
             '<a href="' + esc(it.url) + '" target="_blank" rel="noopener noreferrer">' + esc(it.name) + '</a>' +
             (it.nameEn && showEn() ? '<span class="en">' + esc(it.nameEn) + '</span>' : '') +
           '</h2>' +
-          '<div class="card-price"><strong>' + fmtPrice(it.priceMan) + '</strong><span>' + fmtPerM2(it.pricePerM2Man) + '</span></div>' +
+          '<div class="card-price"><strong>' + priceHtml(it, fmtPrice(it.priceMan)) + '</strong>' + oldPriceHtml(it, 'old-price', fmtPrice) + '<span>' + fmtPerM2(it.pricePerM2Man) + '</span></div>' +
           '<ul class="specs">' +
             '<li>' + icon('area') + '<span><b>' + fmtArea(it.area) + '</b> · ' + esc(it.layout) + '</span></li>' +
             '<li>' + icon('floor') + '<span><b>' + esc(fmtFloor(it)) + '</b></span></li>' +
@@ -386,6 +394,7 @@
   }
 
   function renderList() {
+    closePop();
     if (!filtered.length) {
       listEl.innerHTML = '<p class="empty">' + t('list.empty') + '</p>';
       return;
@@ -427,8 +436,67 @@
     wrap.querySelector('.carousel-count').textContent = (idx + 1) + ' / ' + n;
   }
 
+  // Price history: each date and price, newest first, beside the card's price. A mouse opens it
+  // by hovering the price; touch and keyboard toggle it; a press anywhere else closes it.
+  // One list in the page, so the list's scroll box and the map sheet do not clip it.
+  var popEl = document.createElement('ul');
+  popEl.id = 'price-pop';
+  popEl.className = 'price-pop';
+  popEl.hidden = true;
+  document.body.appendChild(popEl);
+  var popBtn = null, lastPointer = '';
+  function fmtDay(day) {
+    var p = day.split('-');
+    return new Date(+p[0], p[1] - 1, +p[2]).toLocaleDateString(fmt().dateLocale, { day: 'numeric', month: 'short' });
+  }
+  function openPop(btn) {
+    if (popBtn === btn) return;
+    closePop();
+    var it = BY_ID[btn.closest('.card').dataset.id];
+    popEl.setAttribute('aria-label', t('card.priceHistory'));
+    popEl.innerHTML = it.priceHistory.slice().reverse().map(function (h) {
+      return '<li><span>' + esc(fmtDay(h.date)) + '</span><b>' + fmtPrice(h.priceMan) + '</b></li>';
+    }).join('');
+    popEl.hidden = false;
+    var r = btn.getBoundingClientRect(), w = popEl.offsetWidth, h = popEl.offsetHeight;
+    popEl.style.left = Math.max(8, Math.min(r.left, innerWidth - w - 8)) + 'px';
+    popEl.style.top = (r.bottom + 6 + h <= innerHeight ? r.bottom + 6 : r.top - 6 - h) + 'px';
+    btn.setAttribute('aria-expanded', 'true');
+    popBtn = btn;
+  }
+  function closePop() {
+    if (!popBtn) return;
+    popBtn.setAttribute('aria-expanded', 'false');
+    popBtn = null;
+    popEl.hidden = true;
+  }
+  document.addEventListener('pointerdown', function (e) {
+    lastPointer = e.pointerType;
+    if (!e.target.closest('.price-btn')) closePop();
+  }, true);
+  document.addEventListener('pointerover', function (e) {
+    var b = e.pointerType === 'mouse' && e.target.closest('.price-btn');
+    if (b) openPop(b);
+  });
+  document.addEventListener('pointerout', function (e) {
+    var b = e.pointerType === 'mouse' && e.target.closest('.price-btn');
+    if (b && b === popBtn && !b.contains(e.relatedTarget)) closePop();
+  });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closePop(); });
+  // It is placed against the price once, so anything that moves the price closes it.
+  addEventListener('scroll', closePop, true);
+  addEventListener('resize', closePop);
+
   // Card buttons work the same in the list and in the map sheet; only a list card selects.
   function onCardClick(e) {
+    var pb = e.target.closest('.price-btn');
+    if (pb) {
+      // A mouse already opened it on hover; a tap or a key toggles it.
+      if (e.detail && lastPointer === 'mouse') openPop(pb);
+      else if (popBtn === pb) closePop();
+      else openPop(pb);
+      return;
+    }
     var lnk = e.target.closest('.link-btn');
     if (lnk) {
       e.preventDefault();
@@ -639,7 +707,7 @@
 
   // Price chip on the map; favourites carry a star inside the chip.
   function pinIcon(it) {
-    return L.divIcon({ className: 'pin' + (favs[it.id] ? ' is-fav' : '') + (isNew(it) ? ' is-new' : isUpdated(it) ? ' is-updated' : ''), html: '<span>' + (favs[it.id] ? '<b class="pin-star">★</b>' : '') + (isNew(it) ? '<b class="pin-new">' + t('map.new') + '</b>' : isUpdated(it) ? '<b class="pin-updated">' + t('map.updated') + '</b>' : '') + fmt().pin(it.priceMan) + '</span>', iconSize: null });
+    return L.divIcon({ className: 'pin' + (favs[it.id] ? ' is-fav' : '') + (isNew(it) ? ' is-new' : isUpdated(it) ? ' is-updated' : ''), html: '<span>' + (favs[it.id] ? '<b class="pin-star">★</b>' : '') + (isNew(it) ? '<b class="pin-new">' + t('map.new') + '</b>' : isUpdated(it) ? '<b class="pin-updated">' + t('map.updated') + '</b>' : '') + fmt().pin(it.priceMan) + oldPriceHtml(it, 'pin-old', function (m) { return fmt().pin(m); }) + '</span>', iconSize: null });
   }
 
   Object.keys(MODES).forEach(function (k) {
@@ -761,7 +829,7 @@
       '<div class="card-body">' +
         '<div class="mini-head">' +
           '<a class="mini-title" href="' + esc(it.url) + '" target="_blank" rel="noopener noreferrer">' + esc(titleOf(it)) + '</a>' +
-          '<strong class="mini-price">' + (it.kind === 'land' ? fmtPriceRange(it) : fmtPrice(it.priceMan)) + '</strong>' +
+          '<strong class="mini-price">' + priceHtml(it, it.kind === 'land' ? fmtPriceRange(it) : fmtPrice(it.priceMan)) + oldPriceHtml(it, 'old-price', fmtPrice) + '</strong>' +
         '</div>' +
         '<div class="mini-facts">' + facts.join(' · ') + '</div>' +
       '</div>' +
@@ -771,6 +839,7 @@
     var id = phone.matches && activeIds.length === 1 && cluster.hasLayer(markers[activeIds[0]]) ? activeIds[0] : '';
     if (!id) { sheetEl.hidden = true; sheetEl.dataset.id = ''; return; }
     if (sheetEl.dataset.id !== id) {
+      closePop();
       sheetEl.innerHTML = '<button type="button" class="sheet-x" aria-label="' + esc(t('mini.close')) + '">' + icon('close') + '</button>' + miniCardHtml(BY_ID[id]);
       sheetEl.dataset.id = id;
     }

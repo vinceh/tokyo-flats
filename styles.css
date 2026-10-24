@@ -351,6 +351,26 @@ body.is-resizing .divider { z-index: 1; }
   letter-spacing: -0.02em;
 }
 .card-price span { color: var(--ink-2); }
+/* Updated today: the price before the change, struck through, in the line with the price. */
+.card-price .old-price { margin-left: -4px; white-space: nowrap; font-size: 14px; font-weight: 500; color: var(--ink-3); }
+.mini-price .old-price { margin-left: 5px; font-size: 13px; font-weight: 500; color: var(--ink-3); }
+
+/* A price that has changed opens its history: dotted underline, the list in a popover. */
+.price-btn {
+  padding: 0; border: 0; background: none; cursor: pointer;
+  font: inherit; color: inherit; letter-spacing: inherit;
+  text-decoration: underline dotted var(--ink-3); text-decoration-thickness: 1.5px; text-underline-offset: 0.22em;
+}
+.price-btn[aria-expanded="true"] { text-decoration-color: var(--ink); }
+.price-pop {
+  position: fixed; z-index: 2000; margin: 0; padding: 6px 0; list-style: none;
+  border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); box-shadow: var(--shadow-lift);
+  font-size: 13px; color: var(--ink-2); pointer-events: none;
+}
+.price-pop[hidden] { display: none; }
+.price-pop li { display: flex; justify-content: space-between; gap: 18px; padding: 3px 12px; white-space: nowrap; }
+.price-pop b { font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+.price-pop li + li b { font-weight: 500; color: var(--ink-2); }
 
 .specs {
   list-style: none;
@@ -687,6 +707,7 @@ select.brand {
 .updated-tag { background: #3b72b0; }
 .pin-new,
 .pin-updated { margin-right: 4px; padding: 2px 4px; font-size: 0.72em; vertical-align: 1px; }
+.pin-old { margin-left: 4px; font-size: 0.82em; font-weight: 500; color: rgba(255, 255, 255, 0.62); }
 .new-tag,
 .updated-tag { position: absolute; left: 10px; bottom: 10px; padding: 4px 8px; font-size: 11px; }
 
