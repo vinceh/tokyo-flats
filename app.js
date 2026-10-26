@@ -688,7 +688,17 @@
   map.on('zoomend moveend', renderStations);
   renderStations();
 
-  var cluster = L.markerClusterGroup({
+  // markercluster 1.5.3 (still current upstream): when a zoom ends deeper, its zoom-in step only
+  // draws what splits out of clusters it had already drawn. A flight to a far listing ends deeper
+  // in a place it had not drawn, so lone pins there stayed off the map until the next zoom.
+  // After each zoom end, add whatever belongs in view, as its own zoom-out step does.
+  var ClusterGroup = L.MarkerClusterGroup.extend({
+    _mergeSplitClusters: function () {
+      L.MarkerClusterGroup.prototype._mergeSplitClusters.call(this);
+      this._topClusterLevel._recursivelyAddChildrenToMap(null, Math.round(this._map._zoom), this._getExpandedVisibleBounds());
+    }
+  });
+  var cluster = new ClusterGroup({
     maxClusterRadius: 60,
     showCoverageOnHover: false,
     spiderfyOnMaxZoom: true,
