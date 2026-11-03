@@ -248,6 +248,7 @@
       'flag.builder': "Seller's builder required",
       'flag.oldhouse': 'Old house on lot',
       'flag.leasehold': 'Leasehold',
+      'flag.norebuild': "Can't rebuild",
 
       'mini.station': '{station} {n} min',
       'mini.shinjuku': 'Shinjuku ~{n} min',
@@ -504,6 +505,7 @@
       'flag.builder': '建築条件付き',
       'flag.oldhouse': '古家あり',
       'flag.leasehold': '借地権',
+      'flag.norebuild': '再建築不可',
 
       'mini.station': '{station} 徒歩{n}分',
       'mini.shinjuku': '新宿まで約{n}分',
@@ -760,6 +762,7 @@
       'flag.builder': '附建築條件',
       'flag.oldhouse': '含舊屋',
       'flag.leasehold': '借地權',
+      'flag.norebuild': '無法重建',
 
       'mini.station': '{station} 步行{n}分鐘',
       'mini.shinjuku': '到新宿約{n}分鐘',
@@ -1016,6 +1019,7 @@
       'flag.builder': '需用指定建筑商',
       'flag.oldhouse': '带旧房',
       'flag.leasehold': '借地权',
+      'flag.norebuild': '不可重建',
 
       'mini.station': '{station} 步行{n}分钟',
       'mini.shinjuku': '到新宿约{n}分钟',

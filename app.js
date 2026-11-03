@@ -303,7 +303,7 @@
     var road = fmtRoad(it.road);
     var zone = it.zoningCat ? name('zoning', it.zoningCat) : it.zoning;
     var ratios = fmtRatios(it);
-    var flags = [[it.setback, t('flag.setback')], [it.buildCondition, t('flag.builder')], [it.state === 'oldhouse', t('flag.oldhouse')], [it.leasehold, t('flag.leasehold')]]
+    var flags = [[it.setback, t('flag.setback')], [it.buildCondition, t('flag.builder')], [it.state === 'oldhouse', t('flag.oldhouse')], [it.leasehold, t('flag.leasehold')], [it.noRebuild, t('flag.norebuild')]]
       .filter(function (f) { return f[0] === true; });
     return cardOpen(it) + carouselHtml(it) +
         '<div class="card-body">' +
