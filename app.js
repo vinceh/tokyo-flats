@@ -1362,7 +1362,10 @@
   applyFilters();
   if (link && mode === link[1] && BY_ID[decodeURIComponent(link[2])]) {
     var target = decodeURIComponent(link[2]);
-    if (!shared && !filtered.some(function (it) { return it.id === target; })) {
+    // A link to one listing shows that listing. If the link's filters hide it, they are dropped, for a shared view
+    // too: "New today" means the viewer's today, so a link sent on the day a listing changed opened empty a day
+    // later or in another time zone (10 Nov, a link to 東高代々木ペアシティ sent with added=today).
+    if (!filtered.some(function (it) { return it.id === target; })) {
       state = freshState();
       if (BY_ID[target].leasehold) state.lease = 'include';
       syncControls();
