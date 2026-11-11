@@ -1321,7 +1321,8 @@
     var c = map.getCenter();
     p.set('z', map.getZoom());
     p.set('c', c.lat.toFixed(5) + ',' + c.lng.toFixed(5));
-    var sel = activeIdsForUrl.length === 1 ? '#' + mode + '/' + activeIdsForUrl[0] : '';
+    // The selected listing goes in the link only while the filters show it, so the link opens what is on screen.
+    var sel = activeIdsForUrl.length === 1 && filtered.some(function (it) { return it.id === activeIdsForUrl[0]; }) ? '#' + mode + '/' + activeIdsForUrl[0] : '';
     return location.pathname + '?' + p.toString() + sel;
   }
   function writeUrlSoon() {
